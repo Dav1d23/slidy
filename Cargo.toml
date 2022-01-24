@@ -1,0 +1,28 @@
+[package]
+name = "slidy"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "slidy"
+path = "src/main.rs"
+
+[dependencies]
+sdl2 = { version = "0.35", features = ["ttf", "image", "unsafe_textures"] }
+env_logger = "0.9"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+notify = "4.0"
+structopt = "0.3"
+
+[[example]]
+name = "slidy_serde"
+
+[[example]]
+name = "slidy_no_file"
+
+[dev-dependencies]
+serde_json = "1.0"
