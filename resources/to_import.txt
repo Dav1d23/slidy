@@ -1,4 +1,4 @@
 :sl
-:tb :ps 0.1 0.2 :cl 255 0 0 255
+:tb :ps 0.1 0.2 :fc 255 0 0 255
 Imported from ./to_import.txt
 

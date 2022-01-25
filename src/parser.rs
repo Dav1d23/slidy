@@ -15,7 +15,7 @@ struct Token<'a> {
     symbol: Symbol<'a>,
 }
 
-/// The list of symbols the parser will know.
+/// The list of symbols the parser will recognize.
 /// Note that this is not great. Instead of parsing like
 /// letters, symbols, numbers and stuffs, I just try to
 /// recognize the symbol as a whole.
@@ -25,7 +25,7 @@ enum Symbol<'a> {
     Slide,
     Size,
     Text,
-    Color,
+    BackgroundColor,
     FontColor,
     Position,
     Figure,
@@ -36,15 +36,15 @@ enum Symbol<'a> {
     String(&'a str),
 }
 
-/// Decode a text into a token
+/// Decode a string of text into the appropriate Token.
 fn get_token(text: &str) -> Token {
     let symbol = match text {
         ":ge" => Symbol::Generic,
         ":fc" => Symbol::FontColor,
+        ":bc" => Symbol::BackgroundColor,
         ":sl" => Symbol::Slide,
         ":sz" => Symbol::Size,
         ":tb" => Symbol::Text,
-        ":cl" => Symbol::Color,
         ":ps" => Symbol::Position,
         ":fg" => Symbol::Figure,
         ":rt" => Symbol::Rotation,
@@ -389,15 +389,15 @@ impl TextParser {
                     }
                     idx += how_many_skips as usize;
                 }
-                Symbol::Color => {
+                Symbol::BackgroundColor => {
                     trace!(
-                        "Symbol: Color in {:?}",
+                        "Symbol: BackgroundColor in {:?}",
                         self.internals.which_section
                     );
                     match self.internals.which_section {
                         InSection::Import => {
                             return Err(create_err(
-                                "Unable to use the color token when importing slides.",
+                                "Unable to use the BackgroundColor token when importing slides.",
                                 idx,
                             ))
                         }
@@ -418,6 +418,54 @@ impl TextParser {
                                     ))
                                 }
                             };
+                        }
+                        InSection::Text => {
+                            return Err(create_err(
+                                "You can't set the background color of a text.",
+                                idx,
+                            ))
+                        }
+                        InSection::General => {
+                            self.slideshow.bg_col = match get_color(next_tokens)
+                            {
+                                Some(c) => Some(c),
+                                None => return Err(create_err(
+                                    "Unable to read the color token.",
+                                    idx,
+                                )),
+                            };
+                        }
+                        InSection::Figure => {
+                            return Err(
+                                "Color is not managed in a figure tag.".into()
+                            )
+                        }
+                        InSection::None => {
+                            return Err(
+                                "You must enter a section to set the color."
+                                    .into(),
+                            )
+                        }
+                    }
+                    idx += 4;
+                }
+                Symbol::FontColor => {
+                    trace!(
+                        "Symbol: FontColor in {:?}",
+                        self.internals.which_section
+                    );
+                    match self.internals.which_section {
+                        InSection::Import => {
+                            return Err(create_err(
+                                "We can't set the FontColor when importing slides.",
+                                idx,
+                            ))
+                        }
+                        InSection::Slide => {
+                            return Err(create_err(
+                                "FontColor is invalid when defining a slide.",
+                                idx,
+                            ))
                         }
                         InSection::Text => {
                             let last_idx = self.slideshow.slides.len() - 1;
@@ -446,7 +494,7 @@ impl TextParser {
                             }
                         }
                         InSection::General => {
-                            self.slideshow.bg_col = match get_color(next_tokens)
+                            self.slideshow.font_col = match get_color(next_tokens)
                             {
                                 Some(c) => Some(c),
                                 None => return Err(create_err(
@@ -457,7 +505,7 @@ impl TextParser {
                         }
                         InSection::Figure => {
                             return Err(
-                                "Color is not managed in a figure tag.".into()
+                                "FontColor is not managed in a figure tag.".into()
                             )
                         }
                         InSection::None => {
@@ -489,20 +537,6 @@ impl TextParser {
                             }
                         };
                     idx += 2;
-                }
-
-                Symbol::FontColor => {
-                    trace!("Symbol: FontColor.");
-                    self.slideshow.font_col = match get_color(next_tokens) {
-                        Some(c) => Some(c),
-                        None => {
-                            return Err(create_err(
-                                "Unable to parse the color token.",
-                                idx,
-                            ))
-                        }
-                    };
-                    idx += 4;
                 }
                 Symbol::Rotation => {
                     trace!("Symbol: Rotation.");
