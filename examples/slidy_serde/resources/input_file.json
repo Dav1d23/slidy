@@ -1,0 +1,73 @@
+{
+  "slides": [
+    {
+      "bg_color": {
+        "r": 0,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "sections": [
+        {
+          "size": {
+            "x": 0.04,
+            "y": 0.08
+          },
+          "position": {
+            "x": 0.1,
+            "y": 0.1
+          },
+          "sec_main": {
+            "Text": {
+              "text": "Json defined slides",
+              "color": {
+                "r": 255,
+                "g": 0,
+                "b": 0,
+                "a": 255
+              },
+              "font": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "bg_color": {
+        "r": 255,
+        "g": 255,
+        "b": 255,
+        "a": 255
+      },
+      "sections": [
+        {
+          "size": {
+            "x": 0.04,
+            "y": 0.08
+          },
+          "position": {
+            "x": 0.1,
+            "y": 0.1
+          },
+          "sec_main": {
+            "Text": {
+              "text": "We implement ser/de ;)",
+              "color": {
+                "r": 255,
+                "g": 0,
+                "b": 0,
+                "a": 255
+              },
+              "font": null
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "fonts": {
+  },
+  "bg_col": null,
+  "font_col": null,
+  "font_size": null
+}
