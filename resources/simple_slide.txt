@@ -1,13 +1,13 @@
-:ge :cl 50 100 200 100
+:ge :bc 50 100 200 100
 
 :sl
 :fg star.jpg
-:tb :ps 0.1 0.1 :cl 155 250 255 255 :sz 20
+:tb :ps 0.1 0.1 :fc 155 250 255 255 :sz 20
 We can load images.
 
 
 :sl
-:tb :cl 255 150 255 255 :sz 20
+:tb :fc 255 150 255 255 :sz 20
 The next slide is imported using the \
 `im` tag. Note that the `generic` \
 section applies to that one as well.
