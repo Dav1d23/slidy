@@ -19,7 +19,8 @@ pub fn get_default_font(
     let fontbytes = include_bytes!("../assets/FreeMono.ttf");
     let mut points = 100;
     loop {
-        let rwfont = sdl2::rwops::RWops::from_bytes(fontbytes).unwrap();
+        let rwfont = sdl2::rwops::RWops::from_bytes(fontbytes)
+            .expect("Font file has been moved");
         if let Ok(font) = context.load_font_from_rwops(rwfont, points) {
             return font;
         }

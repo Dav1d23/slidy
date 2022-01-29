@@ -68,7 +68,9 @@ pub fn get_canvas(
     width: u32,
     name: &str,
 ) -> sdl2::render::Canvas<sdl2::video::Window> {
-    let video_subsystem = context.video().unwrap();
+    let video_subsystem = context
+        .video()
+        .expect("Unable to build the video subsystem?");
     video_subsystem
         .gl_load_library_default()
         .expect("unable to initialize opengl");
@@ -78,7 +80,7 @@ pub fn get_canvas(
     if resizable {
         windowbuilder.resizable();
     }
-    let window = windowbuilder.build().unwrap();
+    let window = windowbuilder.build().expect("Unable to build the window");
 
     match window.into_canvas().target_texture().accelerated().build() {
         Ok(res) => return res,
@@ -92,7 +94,7 @@ pub fn get_canvas(
     if resizable {
         windowbuilder.resizable();
     }
-    let window = windowbuilder.build().unwrap();
+    let window = windowbuilder.build().expect("Unable to build the window");
 
     window
         .into_canvas()

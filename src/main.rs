@@ -107,8 +107,11 @@ fn main() {
     let (request_update_tx, request_update_rx) = channel();
     // 3. Notify a change in the input file.
     let (watcher_tx, watcher_rx) = channel();
-    let mut watcher = raw_watcher(watcher_tx).unwrap();
-    watcher.watch(&path, RecursiveMode::NonRecursive).unwrap();
+    let mut watcher =
+        raw_watcher(watcher_tx).expect("Unable to create the raw watcher");
+    watcher
+        .watch(&path, RecursiveMode::NonRecursive)
+        .unwrap_or_else(|e| panic!("Unable to watch {:?}: {}", &path, e));
 
     // Let's start the threads now.
     // The first one is related to the slider. Whenever a request to request_update is sent,
@@ -125,10 +128,13 @@ fn main() {
                 // If we can't parse or send the slides, just print the reason,
                 // and then loop again waiting for a new request.
                 let slides = slidy::parser::parse_file(&path);
-                if let Err(e) = slides {
-                    error!("Error when parsing the file: {}", e);
-                } else if let Err(e) = send_slides_tx.send(slides.unwrap()) {
-                    error!("Error when sending the slides: {}", e)
+                match slides {
+                    Err(e) => error!("Error when parsing {:?}: {}", &path, e),
+                    Ok(slides) => {
+                        if let Err(e) = send_slides_tx.send(slides) {
+                            error!("Error when sending the slides: {}", e)
+                        }
+                    }
                 };
             }
         }
@@ -141,7 +147,9 @@ fn main() {
     let request_update_tx_watcher = request_update_tx.clone();
     thread::spawn(move || loop {
         if watcher_rx.recv().is_ok() {
-            request_update_tx_watcher.send(()).unwrap()
+            request_update_tx_watcher
+                .send(())
+                .expect("Unable request a slide's update")
         }
     });
 
@@ -178,13 +186,17 @@ fn main() {
     timer_win.visibility_toggle();
 
     // Request slides
-    request_update_tx.send(()).unwrap();
+    request_update_tx
+        .send(())
+        .expect("Unable to request slide update");
     let mut win_id: u32 = 0;
 
     let fixed_fps = Duration::from_nanos(1_000_000_000 / 10);
 
     // Event loop
-    let mut event_pump = sdl_context.event_pump().unwrap();
+    let mut event_pump = sdl_context
+        .event_pump()
+        .expect("Unable to get the event pump");
     'running: loop {
         let timer = std::time::SystemTime::now();
         // Check if we have new slides
@@ -193,6 +205,10 @@ fn main() {
         };
         for event in event_pump.poll_iter() {
             // Check if one of the 2 windows is highlighted.
+
+            // @TODO why is this assert failing?
+            //debug_assert!(slideshow_win.generic_win.get_win_ids().len() == 1);
+            //debug_assert!(timer_win.generic_win.get_win_ids().len() == 1);
             if win_id
                 == *slideshow_win.generic_win.get_win_ids().get(0).unwrap()
             {
@@ -249,16 +265,22 @@ fn main() {
         timer_win.update(slide_len, slide_idx + 1);
         timer_win.generic_win.canvases_present();
 
-        let elapsed = timer.elapsed().unwrap();
-        if elapsed < fixed_fps {
-            let sleeptime = fixed_fps - elapsed;
-            // Fix framerate to 10 fps
-            sleep(sleeptime);
-        } else {
-            warn!(
-                "Unable to have 10 fps, needed {:?} to show the slide",
-                elapsed
-            );
+        match timer.elapsed() {
+            Ok(elapsed) => {
+                if elapsed < fixed_fps {
+                    let sleeptime = fixed_fps - elapsed;
+                    // Fix framerate to 10 fps
+                    sleep(sleeptime);
+                } else {
+                    warn!(
+                        "Unable to have 10 fps, needed {:?} to show the slide",
+                        elapsed
+                    );
+                }
+            }
+            Err(e) => {
+                error!("Previous measured time is later than actual one: {}", e)
+            }
         }
     }
 }
