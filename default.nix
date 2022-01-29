@@ -9,6 +9,6 @@ nixpkgs.rustPlatform.buildRustPackage rec {
 
   src = builtins.fetchGit ./.;
 
-  cargoSha256 = "0flk006wzqmqmg32qj6g56brhi64rs1vq64apdbgnldvn34rj6gr";
+  cargoSha256 = "05kz4zlh40kmdll9zf1nz82pmd6nsizp5inacda9rxbnml800dqw";
   verifyCargoDeps = true;
 }
