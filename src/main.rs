@@ -182,7 +182,6 @@ fn main() {
     let mut win_id: u32 = 0;
 
     let fixed_fps = Duration::from_nanos(1_000_000_000 / 10);
-    let sec_as_nanos = Duration::from_secs(1).as_nanos();
 
     // Event loop
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -251,10 +250,8 @@ fn main() {
         timer_win.generic_win.canvases_present();
 
         let elapsed = timer.elapsed().unwrap();
-        // trace!("max fps: {:?}", sec_as_nanos / elapsed.as_nanos());
         if elapsed < fixed_fps {
             let sleeptime = fixed_fps - elapsed;
-            // trace!("Sleeping for {:?}", sleeptime);
             // Fix framerate to 10 fps
             sleep(sleeptime);
         } else {

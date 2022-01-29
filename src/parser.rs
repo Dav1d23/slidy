@@ -200,8 +200,13 @@ impl TextParser {
         inp: &str,
         base_folder: &Path,
     ) -> Result<(), Box<dyn Error + 'static>> {
+        if inp.is_empty() || inp.starts_with('#') {
+            return Ok(());
+        }
+
         // "tokenize" the input str
-        let tokens: Vec<Token> = inp.split(' ').map(get_token).collect();
+        let tokens: Vec<Token> =
+            inp.split_ascii_whitespace().map(get_token).collect();
 
         let mut idx = 0;
         // Consume tokens one by one and update the slides and the internals of
@@ -455,12 +460,10 @@ impl TextParser {
                         self.internals.which_section
                     );
                     match self.internals.which_section {
-                        InSection::Import => {
-                            return Err(create_err(
-                                "We can't set the FontColor when importing slides.",
-                                idx,
-                            ))
-                        }
+                        InSection::Import => return Err(create_err(
+                            "We can't set the FontColor when importing slides.",
+                            idx,
+                        )),
                         InSection::Slide => {
                             return Err(create_err(
                                 "FontColor is invalid when defining a slide.",
@@ -494,18 +497,21 @@ impl TextParser {
                             }
                         }
                         InSection::General => {
-                            self.slideshow.font_col = match get_color(next_tokens)
-                            {
-                                Some(c) => Some(c),
-                                None => return Err(create_err(
-                                    "Unable to read the color token.",
-                                    idx,
-                                )),
-                            };
+                            self.slideshow.font_col =
+                                match get_color(next_tokens) {
+                                    Some(c) => Some(c),
+                                    None => {
+                                        return Err(create_err(
+                                            "Unable to read the color token.",
+                                            idx,
+                                        ))
+                                    }
+                                };
                         }
                         InSection::Figure => {
                             return Err(
-                                "FontColor is not managed in a figure tag.".into()
+                                "FontColor is not managed in a figure tag."
+                                    .into(),
                             )
                         }
                         InSection::None => {
@@ -579,10 +585,6 @@ fn create_slides(
 
     for (line_num, line) in reader.lines().enumerate() {
         let line: String = line?;
-        // Ignore empty lines, and lines starting with # (comments!)
-        if line.is_empty() || line.as_str().starts_with('#') {
-            continue;
-        }
         if let Err(e) = tp.parse_line(&line, base_folder) {
             // Report the line_num in "normal way"
             return Err(format!("Line {}: {}", line_num + 1, e).into());
@@ -607,4 +609,82 @@ pub fn parse_file(
         .ok_or("Unable to find the parent: is this root already?")?;
     let slides = create_slides(reader, base_folder)?;
     Ok(slides)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use serde_json;
+    use std::fs::File;
+    use std::io::BufReader;
+
+    /// Load and a file and check its existence.
+    macro_rules! load_exists {
+        ($f:expr) => {{
+            use std::path::PathBuf;
+
+            let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            d.push($f);
+            assert!(d.exists());
+            d
+        }};
+    }
+
+    #[test]
+    /// Verify the simple test in resources works fine.
+    fn test_resource_simple_slide() {
+        let d = load_exists!("resources/simple_slide.txt");
+
+        let slideshow = parse_file(&d)
+            .map_err(|e| panic!("Unable to read the slides: {}", e))
+            .unwrap();
+
+        assert_eq!(slideshow.slides.len(), 3);
+    }
+
+    #[test]
+    /// Verify the input json file is valid.
+    fn test_load_json() {
+        let d = load_exists!("examples/slidy_serde/resources/input_file.json");
+
+        let f = File::open(&d).expect(&format!("File {:?} not found.", &d));
+        let reader = BufReader::new(f);
+        let slideshow: Slideshow = serde_json::from_reader(reader)
+            .map_err(|e| panic!("Unable to read the slides: {}", e))
+            .unwrap();
+
+        assert_eq!(slideshow.slides.len(), 2);
+    }
+
+    #[test]
+    /// Verify the example in the README works.
+    /// Note that if this test fails, we need to change the README as well!
+    fn test_readme_example() {
+        let example = r#"
+# Comments are ignored
+
+:ge :bc 20 40 40 250 :fc 250 250 250 180
+
+:sl
+:tb :sz 20 :fc 250 0 0 180
+This is title 1
+:tb :ps 0.1 0.3 :sz 16
+A line \
+Another line \
+And the last one
+
+:sl
+:tb :sz 20 :fc 250 250 0 180
+And title 2
+:tb :ps 0.1 0.3 :sz 16
+Some other content
+
+"#;
+
+        let mut tp = TextParser::new();
+        for line in example.split("\n") {
+            tp.parse_line(&line, Path::new(""))
+                .expect(&format!("Unable to read `{}`.", &line));
+        }
+    }
 }
