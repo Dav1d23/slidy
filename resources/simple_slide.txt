@@ -9,8 +9,8 @@ We can load images.
 :sl
 :tb :fc 255 150 255 255 :sz 20
 The next slide is imported using the \
-`im` tag. Note that the `generic` \
-section applies to that one as well.
+  `im` tag. Note that the `generic` \
+    section applies to that one as well.
 
 
 :im ./to_import.txt

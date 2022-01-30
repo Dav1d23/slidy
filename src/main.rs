@@ -206,9 +206,6 @@ fn main() {
         for event in event_pump.poll_iter() {
             // Check if one of the 2 windows is highlighted.
 
-            // @TODO why is this assert failing?
-            //debug_assert!(slideshow_win.generic_win.get_win_ids().len() == 1);
-            //debug_assert!(timer_win.generic_win.get_win_ids().len() == 1);
             if win_id
                 == *slideshow_win.generic_win.get_win_ids().get(0).unwrap()
             {

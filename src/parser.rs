@@ -238,9 +238,11 @@ impl TextParser {
             return Ok(());
         }
 
-        // "tokenize" the input str
+        // @TODO I should attach the meaning to the tokens? for instance, color
+        // makes sense only with the colors attached, as well as import does
+        // make sense only with the import path.
         let mut tokens: std::collections::VecDeque<Token> =
-            inp.split_ascii_whitespace().map(get_token).collect();
+            inp.split(' ').map(get_token).collect();
 
         // Consume tokens one by one and update the slides and the internals of
         // the parser.
@@ -302,7 +304,8 @@ impl TextParser {
                         // after the current one. To do so, we store the
                         // current slide and then we append the new ones.
                         if self.internals.current_slide.is_some() {
-                            let cs = self.internals.current_slide.take().unwrap();
+                            let cs =
+                                self.internals.current_slide.take().unwrap();
                             self.slideshow.slides.push(cs);
                         }
                         let mut path = std::path::PathBuf::new();
@@ -703,8 +706,8 @@ mod test {
 This is title 1
 :tb :ps 0.1 0.3 :sz 16
 A line \
-Another line \
-And the last one
+  Another line \
+    And the last one
 
 :sl
 :tb :sz 20 :fc 250 250 0 180
@@ -719,5 +722,34 @@ Some other content
             tp.parse_line(&line, Path::new(""))
                 .expect(&format!("Unable to read `{}`.", &line));
         }
+    }
+
+    #[test]
+    fn test_maintain_whitespace() {
+        let example = r#"
+:sl :tb
+    4 whitespaces before
+"#;
+
+        let mut tp = TextParser::new();
+        for line in example.split("\n") {
+            tp.parse_line(&line, Path::new(""))
+                .expect(&format!("Unable to read `{}`.", &line));
+        }
+        let slides = tp.take();
+
+        let text = slides.slides.get(0).and_then(|slide| {
+            slide.sections.get(0).and_then(|section| {
+                if let Some(SectionMain::Text(sec_text)) = &section.sec_main {
+                    Some(&sec_text.text)
+                } else {
+                    None
+                }
+            })
+        });
+        assert_eq!(
+            &text.expect("text must be filled in").as_str(),
+            &"    4 whitespaces before "
+        );
     }
 }

@@ -319,6 +319,7 @@ impl<'a> SlideShowWindow<'a> {
                 let elem = texture_holder.remove(el).unwrap();
                 // @safety This is ok. These textures will never be used
                 // again, we can safely remove them.
+                // @todo why is this not used again?
                 unsafe {
                     elem.destroy();
                 }
@@ -466,8 +467,8 @@ impl<'a> SlideShowWindow<'a> {
                         let texture =
                             surface_text.as_texture(&texture_creator).unwrap();
                         canvas.copy(&texture, None, rect).unwrap();
-                        // @safety This is ok, since the texture has been copied and we can
-                        // safely remove it.
+                        // @safety This is ok, since the texture has been copied to the canvas and we can
+                        // safely remove the one in here.
                         unsafe {
                             texture.destroy();
                         }
