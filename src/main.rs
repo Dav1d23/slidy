@@ -127,6 +127,7 @@ fn main() {
             if request_update_rx.recv().is_ok() {
                 // If we can't parse or send the slides, just print the reason,
                 // and then loop again waiting for a new request.
+
                 let slides = slidy::parser::parse_file(&path);
                 match slides {
                     Err(e) => error!("Error when parsing {:?}: {}", &path, e),
