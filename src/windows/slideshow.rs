@@ -9,7 +9,9 @@ use sdl2::render::Texture;
 
 use super::{utils, utils::GenericWindow};
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, Copy, Clone)]
+#[derive(
+    serde::Serialize, serde::Deserialize, Debug, Copy, Clone, PartialEq,
+)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -57,14 +59,14 @@ impl From<(u8, u8, u8, u8)> for Color {
 /// ```
 /// TODO This "coordinates" can also be interpreted as sizes, depending on
 /// where they are used. This should be changed to make the code cleaner.
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
 }
 
 /// How a text section should looks like.
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct SectionText {
     /// The text that should be rendered
     pub text: String,
@@ -86,7 +88,7 @@ impl Default for SectionText {
 }
 
 /// How a figure section should looks like.
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct SectionFigure {
     pub path: String,
     pub rotation: f32,
@@ -103,7 +105,7 @@ impl Default for SectionFigure {
 }
 
 /// The main entry in each section.
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub enum SectionMain {
     // A figure
     Figure(SectionFigure),
@@ -114,7 +116,7 @@ pub enum SectionMain {
 /// The internal representation for a `section`.
 /// The section can contain text, has a size, a position,
 /// and so on and so forth.
-#[derive(serde::Serialize, serde::Deserialize, Debug, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Default, PartialEq)]
 pub struct Section {
     pub size: Option<Vec2>,
     pub position: Option<Vec2>,
@@ -124,7 +126,7 @@ pub struct Section {
 /// The representation of a single slide.
 /// It has a background color and one or more sections.
 /// Each section contains either text, or an image, or both.
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct Slide {
     pub bg_color: Option<Color>,
     pub sections: Vec<Section>,

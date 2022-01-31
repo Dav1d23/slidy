@@ -21,9 +21,9 @@ Slides can be defined this way using the slidy's language:
 :tb :sz 20 :fc 250 0 0 180
 This is title 1
 :tb :ps 0.1 0.3 :sz 16
-A line \
-Another line \
-And the last one
+A line
+  Another line
+    And the last one
 
 :sl
 :tb :sz 20 :fc 250 250 0 180
