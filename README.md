@@ -15,20 +15,21 @@ no more :)
 Slides can be defined this way using the slidy's language:
 
 ```text
-:ge :bc 20 40 40 250 :fc 250 250 250 180
+# Comments are ignored
+:ge :bc green :fc yellow :sz 16
 
 :sl
-:tb :sz 20 :fc 250 0 0 180
+:tb :sz 20 :fc red
 This is title 1
-:tb :ps 0.1 0.3 :sz 16
+:tb :ps 0.1 0.3
 A line
   Another line
     And the last one
 
 :sl
-:tb :sz 20 :fc 250 250 0 180
+:tb :sz 20 :fc blue
 And title 2
-:tb :ps 0.1 0.3 :sz 16
+:tb :ps 0.1 0.3
 Some other content
 ```
 
@@ -54,7 +55,9 @@ The (0, 0) coordinate is the top-left corner, and (1, 1) is the bottom
 right.
 
 ### Colors
-Colors are in RGB+Alpha format.
+Colors are in RGB+Alpha format, and they can be specified as u8 (:cl 200 100
+100 100) hex (:cl #rrggbbaa) or via name (:cl silver)
+(https://encycolorpedia.com/websafe).
 
 # Goals and non-goals
 `Slidy`'s does _not_ want to be a replacement for PowerPoint (or Impress, or
