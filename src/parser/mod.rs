@@ -11,7 +11,7 @@ use std::path::Path;
 use crate::windows::slideshow::Slideshow;
 
 /// Create the slides.
-fn create_slides(
+fn parse_text(
     inp: &str,
     base_folder: &Path,
 ) -> Result<Slideshow, Box<dyn Error + 'static>> {
@@ -40,7 +40,7 @@ pub fn parse_file(
     // Read the whole file to a String.
     let mut file_to_string = String::new();
     reader.read_to_string(&mut file_to_string)?;
-    let slides = create_slides(file_to_string.as_str(), base_folder)?;
+    let slides = parse_text(file_to_string.as_str(), base_folder)?;
     Ok(slides)
 }
 
@@ -50,14 +50,13 @@ mod test {
     use serde_json;
     use std::fs::File;
     use std::io::BufReader;
+    use std::path::PathBuf;
 
     use crate::windows::slideshow::SectionMain;
 
     /// Load and a file and check its existence.
     macro_rules! load_exists {
         ($f:expr) => {{
-            use std::path::PathBuf;
-
             let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             d.push($f);
             assert!(d.exists());
@@ -75,6 +74,13 @@ mod test {
             .unwrap();
 
         assert_eq!(slideshow.slides.len(), 3);
+    }
+
+    #[test]
+    fn test_import_ko_file_not_there() {
+        let example = ":im ./non_existing_file.txt";
+        let base_path = PathBuf::from("");
+        assert!(parse_text(example, &base_path).is_err());
     }
 
     #[test]
@@ -97,27 +103,25 @@ mod test {
     fn test_readme_example() {
         let example = r#"
 # Comments are ignored
-
-:ge :bc 20 40 40 250 :fc 250 250 250 180
+:ge :bc green :fc yellow :sz 16
 
 :sl
-:tb :sz 20 :fc 250 0 0 180
+:tb :sz 20 :fc red
 This is title 1
-:tb :ps 0.1 0.3 :sz 16
+:tb :ps 0.1 0.3
 A line
   Another line
     And the last one
 
 :sl
-:tb :sz 20 :fc 250 250 0 180
+:tb :sz 20 :fc blue
 And title 2
-:tb :ps 0.1 0.3 :sz 16
+:tb :ps 0.1 0.3
 Some other content
-
 "#;
 
         let p = Path::new("");
-        let slides = create_slides(example, &p)
+        let slides = parse_text(example, &p)
             .expect("should be able to create the slides.");
         assert_eq!(slides.slides.len(), 2);
     }
@@ -130,7 +134,7 @@ Some other content
 "#;
 
         let p = Path::new("");
-        let slides = create_slides(example, &p)
+        let slides = parse_text(example, &p)
             .expect("should be able to create the slides.");
 
         let text = slides.slides.get(0).and_then(|slide| {

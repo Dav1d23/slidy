@@ -65,7 +65,13 @@ impl<'a> Lexer<'a> {
         slideshow
     }
 
-    /// @todo report the span - or use it - in the error message
+    /// Read the input tokens and build the related slideshow.
+    ///
+    /// Note that this function may be called multiple times in case multiple
+    /// streams are given, but a prerequisite is that each "group" of token
+    /// must be present when we read it. As an example, it is perfectly ok to
+    /// build the slides by passing each complete slide to this function, but
+    /// is it _not_ ok to give a color token not followed by the color itself.
     pub(super) fn read_tokens(
         &mut self,
         tokens: &[Token],
@@ -136,10 +142,26 @@ mod test {
     }
 
     #[test]
-    fn test_import_ok() {
+    fn test_import_wrong_tokens() {
         let tokens = [
             Token::new(Import, TokenSpan::new(0, 1, 2)),
-            Token::new(String("./to_import.txt"), TokenSpan::new(0, 1, 2)),
+            Token::new(Figure, TokenSpan::new(0, 1, 2)),
+        ];
+        let base_path = resources_path();
+        let mut lex = Lexer::new(base_path.as_path());
+        assert!(lex.read_tokens(&tokens).is_err());
+    }
+
+    #[test]
+    fn test_color_string() {
+        let tokens = [
+            Token::new(Slide, TokenSpan::new(0, 1, 2)),
+            Token::new(TextBuffer, TokenSpan::new(1, 1, 2)),
+            Token::new(Fontcolor, TokenSpan::new(2, 1, 2)),
+            Token::new(String("#80808012"), TokenSpan::new(3, 1, 2)),
+            Token::new(TextBuffer, TokenSpan::new(4, 1, 2)),
+            Token::new(Fontcolor, TokenSpan::new(5, 1, 2)),
+            Token::new(String("red"), TokenSpan::new(6, 1, 2)),
         ];
         let base_path = resources_path();
         let mut lex = Lexer::new(base_path.as_path());
@@ -153,46 +175,37 @@ mod test {
 
         let slide = slideshow::Slide {
             bg_color: None,
-            sections: vec![Section {
-                size: None,
-                position: Some(Vec2 { x: 0.1, y: 0.2 }),
-                sec_main: Some(SectionMain::Text(SectionText {
-                    text: "Imported from ./to_import.txt\n\n".into(),
-                    color: Some(Color {
-                        r: 255,
-                        g: 0,
-                        b: 0,
-                        a: 255,
-                    }),
-                    font: None,
-                })),
-            }],
+            sections: vec![
+                Section {
+                    size: None,
+                    position: None,
+                    sec_main: Some(SectionMain::Text(SectionText {
+                        text: std::string::String::from(""),
+                        color: Some(Color {
+                            r: 128,
+                            g: 128,
+                            b: 128,
+                            a: 18,
+                        }),
+                        font: None,
+                    })),
+                },
+                Section {
+                    size: None,
+                    position: None,
+                    sec_main: Some(SectionMain::Text(SectionText {
+                        text: std::string::String::from(""),
+                        color: Some(Color {
+                            r: 255,
+                            g: 0,
+                            b: 0,
+                            a: 255,
+                        }),
+                        font: None,
+                    })),
+                },
+            ],
         };
         assert_eq!(result, &slide);
-    }
-
-    #[test]
-    fn test_import_wrong_tokens() {
-        let tokens = [
-            Token::new(Import, TokenSpan::new(0, 1, 2)),
-            Token::new(Figure, TokenSpan::new(0, 1, 2)),
-        ];
-        let base_path = resources_path();
-        let mut lex = Lexer::new(base_path.as_path());
-        assert!(lex.read_tokens(&tokens).is_err());
-    }
-
-    #[test]
-    fn test_import_ko_file_not_there() {
-        let tokens = [
-            Token::new(Import, TokenSpan::new(0, 1, 2)),
-            Token::new(
-                String("./non_existing_file.txt"),
-                TokenSpan::new(0, 1, 2),
-            ),
-        ];
-        let base_path = resources_path();
-        let mut lex = Lexer::new(base_path.as_path());
-        assert!(lex.read_tokens(&tokens).is_err());
     }
 }
