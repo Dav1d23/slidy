@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
@@ -7,7 +5,7 @@ use sdl2::video::Window;
 
 pub struct GenericWindow {
     /// All the canvases where we need to draw.
-    pub canvases: Vec<RefCell<Canvas<Window>>>,
+    pub canvases: Vec<Canvas<Window>>,
 }
 
 pub trait GetWinId {
@@ -22,14 +20,14 @@ impl GetWinId for GenericWindow {
     fn get_win_ids(&self) -> Vec<u32> {
         self.canvases
             .iter()
-            .map(|c| c.borrow().window().id())
+            .map(|c| c.window().id())
             .collect::<Vec<u32>>()
     }
 }
 
 impl CanvasPresent for GenericWindow {
     fn canvases_present(&mut self) {
-        self.canvases.iter().for_each(|c| c.borrow_mut().present());
+        self.canvases.iter_mut().for_each(|c| c.present());
     }
 }
 

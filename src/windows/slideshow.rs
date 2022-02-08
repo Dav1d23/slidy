@@ -1,11 +1,12 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
 
 use sdl2::event::Event;
 use sdl2::image::LoadTexture;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color as sdl_color;
+use sdl2::render::Canvas;
 use sdl2::render::Texture;
+use sdl2::video::Window;
 
 use super::{utils, utils::GenericWindow};
 
@@ -185,22 +186,16 @@ impl<'a> SlideShowWindow<'a> {
         w: u32,
     ) -> Self {
         // The main canvas for the main slides
-        let canvas = RefCell::new(utils::get_canvas(
-            context,
-            resizable,
-            h,
-            w,
-            "SlideShow",
-        ));
+        let canvas = utils::get_canvas(context, resizable, h, w, "SlideShow");
         // The next slide
-        let canvas_next = RefCell::new(utils::get_canvas(
+        let mut canvas_next = utils::get_canvas(
             context,
             resizable,
             h,
             w,
             "SlideShow: next slide",
-        ));
-        canvas_next.borrow_mut().window_mut().hide();
+        );
+        canvas_next.window_mut().hide();
 
         let slides = Slideshow::default();
         SlideShowWindow {
@@ -227,7 +222,7 @@ impl<'a> SlideShowWindow<'a> {
     /// Toggle visibility
     pub fn toggle_sideslide(&mut self) {
         // The side slide is with index 1.
-        let mut c = self.generic_win.canvases.get_mut(1).unwrap().borrow_mut();
+        let c = self.generic_win.canvases.get_mut(1).unwrap();
         if self.is_visible {
             c.window_mut().hide();
         } else {
@@ -336,7 +331,7 @@ impl<'a> SlideShowWindow<'a> {
             .iter_mut()
             .zip(self.textures.iter_mut())
         {
-            let texture_creator = canvas.borrow().texture_creator();
+            let texture_creator = canvas.texture_creator();
             for elem in self.slides.slides.iter() {
                 for sec in elem.sections.iter() {
                     if let Some(SectionMain::Figure(fig)) = &sec.sec_main {
@@ -355,124 +350,6 @@ impl<'a> SlideShowWindow<'a> {
                                     fig.path
                                 );
                             }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fn draw_single_section(
-        &self,
-        // Which canvas to use
-        canvas_idx: u32,
-        elem: &Section,
-        base_height: &mut f32,
-        font_size: (f32, f32),
-        font_col: Color,
-    ) {
-        let mut canvas = self
-            .generic_win
-            .canvases
-            .get(canvas_idx as usize)
-            .unwrap()
-            .borrow_mut();
-        if let Some(sec_main) = &elem.sec_main {
-            match sec_main {
-                // Manage pictures
-                SectionMain::Figure(fig) => {
-                    {
-                        let res = self
-                            .textures
-                            .get(canvas_idx as usize)
-                            .unwrap()
-                            .get(&fig.path);
-                        if let Some(texture) = res {
-                            // if we have a path, the section cannot contain anything else
-                            let (x_start, y_start) = match &elem.position {
-                                Some(p) => (p.x, p.y),
-                                None => (0.01, 0.01),
-                            };
-                            let (x_size, y_size) = match &elem.size {
-                                Some(p) => (p.x, p.y),
-                                None => (0.1, 0.1),
-                            };
-                            let rect = utils::get_scaled_rect(
-                                canvas.window(),
-                                x_start,
-                                y_start,
-                                x_size,
-                                y_size,
-                            );
-                            canvas
-                                .copy_ex(
-                                    texture,
-                                    None,
-                                    rect,
-                                    fig.rotation.into(),
-                                    None,
-                                    false,
-                                    false,
-                                )
-                                .unwrap();
-                        } else {
-                            error!("Texture at {} was not ready", fig.path);
-                        }
-                    }
-                }
-                // Manage text
-                SectionMain::Text(SectionText {
-                    text,
-                    color,
-                    font: _new_font,
-                }) => {
-                    let text_slice = text.as_str();
-                    for (idx, chunk) in text_slice.split('\n').enumerate() {
-                        if chunk.is_empty() {
-                            continue;
-                        }
-                        // Get the default size for each letter.
-                        let (x_size, y_size) = match &elem.size {
-                            Some(p) => (p.x, p.y),
-                            None => font_size,
-                        };
-                        let (x_start, y_start) = match &elem.position {
-                            // Each line starts 0.1 lower than the size
-                            Some(p) => (p.x, p.y + y_size * idx as f32),
-                            // If we don't have any default, starts from base_height
-                            // and 0.01
-                            None => (0.01, *base_height),
-                        };
-                        // Update base_height so what next run we already are
-                        // down this much and we won't overwrite new text.
-                        *base_height += y_size;
-                        // The chunk size is the whole line.
-                        // We build a single rect that contains the whole line.
-                        let chunk_size: f32 = chunk.len() as f32 * x_size;
-                        let rect = utils::get_scaled_rect(
-                            canvas.window(),
-                            x_start,
-                            y_start,
-                            chunk_size,
-                            y_size,
-                        );
-                        //let rect = Rect::new(x_start, y_start, chunk_size, 0.01);
-                        let surface_text = self
-                            .default_font
-                            .render(chunk)
-                            .solid(match color {
-                                Some(c) => *c,
-                                None => font_col,
-                            })
-                            .unwrap();
-                        let texture_creator = canvas.texture_creator();
-                        let texture =
-                            surface_text.as_texture(&texture_creator).unwrap();
-                        canvas.copy(&texture, None, rect).unwrap();
-                        // @safety This is ok, since the texture has been copied to the canvas and we can
-                        // safely remove the one in here.
-                        unsafe {
-                            texture.destroy();
                         }
                     }
                 }
@@ -512,14 +389,21 @@ impl<'a> SlideShowWindow<'a> {
         };
         {
             utils::canvas_change_color(
-                &mut self.generic_win.canvases.get_mut(0).unwrap().borrow_mut(),
+                self.generic_win.canvases.get_mut(0).unwrap(),
                 col,
             );
+
+            let canvas = self.generic_win.canvases.get_mut(0).unwrap();
+
+            let textures = self.textures.get(0).unwrap();
+
             for elem in self.slides.slides[self.idx].sections.iter() {
-                self.draw_single_section(
-                    0,
+                draw_single_section(
+                    canvas,
+                    textures,
                     elem,
                     &mut base_height,
+                    self.default_font,
                     font_size,
                     font_col,
                 );
@@ -538,18 +422,129 @@ impl<'a> SlideShowWindow<'a> {
             None => bg_col,
         };
         {
-            utils::canvas_change_color(
-                &mut self.generic_win.canvases.get_mut(1).unwrap().borrow_mut(),
-                col.into(),
-            );
+            let canvas = self.generic_win.canvases.get_mut(1).unwrap();
+
+            utils::canvas_change_color(canvas, col.into());
+
+            let textures = self.textures.get(0).unwrap();
+
             for elem in self.slides.slides[next_idx].sections.iter() {
-                self.draw_single_section(
-                    1,
+                draw_single_section(
+                    canvas,
+                    textures,
                     elem,
                     &mut base_height,
+                    self.default_font,
                     font_size,
                     font_col,
                 );
+            }
+        }
+    }
+}
+
+fn draw_single_section<'a>(
+    canvas: &mut Canvas<Window>,
+    textures: &HashMap<String, Texture>,
+    elem: &Section,
+    base_height: &mut f32,
+    default_font: &sdl2::ttf::Font<'a, 'a>,
+    font_size: (f32, f32),
+    font_col: Color,
+) {
+    if let Some(sec_main) = &elem.sec_main {
+        match sec_main {
+            // Manage pictures
+            SectionMain::Figure(fig) => {
+                {
+                    let res = textures.get(&fig.path);
+                    if let Some(texture) = res {
+                        // if we have a path, the section cannot contain anything else
+                        let (x_start, y_start) = match &elem.position {
+                            Some(p) => (p.x, p.y),
+                            None => (0.01, 0.01),
+                        };
+                        let (x_size, y_size) = match &elem.size {
+                            Some(p) => (p.x, p.y),
+                            None => (0.1, 0.1),
+                        };
+                        let rect = utils::get_scaled_rect(
+                            canvas.window(),
+                            x_start,
+                            y_start,
+                            x_size,
+                            y_size,
+                        );
+                        canvas
+                            .copy_ex(
+                                texture,
+                                None,
+                                rect,
+                                fig.rotation.into(),
+                                None,
+                                false,
+                                false,
+                            )
+                            .unwrap();
+                    } else {
+                        error!("Texture at {} was not ready", fig.path);
+                    }
+                }
+            }
+            // Manage text
+            SectionMain::Text(SectionText {
+                text,
+                color,
+                font: _new_font,
+            }) => {
+                let text_slice = text.as_str();
+                for (idx, chunk) in text_slice.split('\n').enumerate() {
+                    if chunk.is_empty() {
+                        continue;
+                    }
+                    // Get the default size for each letter.
+                    let (x_size, y_size) = match &elem.size {
+                        Some(p) => (p.x, p.y),
+                        None => font_size,
+                    };
+                    let (x_start, y_start) = match &elem.position {
+                        // Each line starts 0.1 lower than the size
+                        Some(p) => (p.x, p.y + y_size * idx as f32),
+                        // If we don't have any default, starts from base_height
+                        // and 0.01
+                        None => (0.01, *base_height),
+                    };
+                    // Update base_height so what next run we already are
+                    // down this much and we won't overwrite new text.
+                    *base_height += y_size;
+                    // The chunk size is the whole line.
+                    // We build a single rect that contains the whole line.
+                    let chunk_size: f32 = chunk.len() as f32 * x_size;
+                    let rect = utils::get_scaled_rect(
+                        canvas.window(),
+                        x_start,
+                        y_start,
+                        chunk_size,
+                        y_size,
+                    );
+                    //let rect = Rect::new(x_start, y_start, chunk_size, 0.01);
+                    let surface_text = default_font
+                        .render(chunk)
+                        .solid(match color {
+                            Some(c) => *c,
+                            None => font_col,
+                        })
+                        .unwrap();
+                    let texture_creator = canvas.texture_creator();
+                    let texture =
+                        surface_text.as_texture(&texture_creator).unwrap();
+                    canvas.copy(&texture, None, rect).unwrap();
+                    // @safety This is ok, since the texture has been copied to the canvas and we can
+                    // safely remove the one in here.
+                    unsafe {
+                        texture.destroy();
+                    }
+                }
             }
         }
     }

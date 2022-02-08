@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::time::SystemTime;
 
 use sdl2::event::Event;
@@ -35,8 +34,7 @@ impl<'a> TimerWindow<'a> {
         h: u32,
         w: u32,
     ) -> Self {
-        let canvas =
-            RefCell::new(utils::get_canvas(context, resizable, h, w, "Timer"));
+        let canvas = utils::get_canvas(context, resizable, h, w, "Timer");
         let timer_status = TimerStatus::Stopped;
         let total_elapsed = 0;
         TimerWindow {
@@ -70,7 +68,7 @@ impl<'a> TimerWindow<'a> {
 
     /// Toggle visibility
     pub fn visibility_toggle(&mut self) {
-        let mut c = self.generic_win.canvases.get_mut(0).unwrap().borrow_mut();
+        let c = self.generic_win.canvases.get_mut(0).unwrap();
         if self.is_visible {
             c.window_mut().hide();
         } else {
@@ -124,11 +122,11 @@ impl<'a> TimerWindow<'a> {
     }
 
     /// Main method to show a slide on the screen.
-    pub fn update(&self, slides_tot: usize, slides_idx: usize) {
-        let mut c = self.generic_win.canvases.get(0).unwrap().borrow_mut();
-        utils::canvas_change_color(&mut c, Color::CYAN);
-        // Draw the timer
+    pub fn update(&mut self, slides_tot: usize, slides_idx: usize) {
         let (h, m, s) = self.get_time();
+        let c = self.generic_win.canvases.get_mut(0).unwrap();
+        utils::canvas_change_color(c, Color::CYAN);
+        // Draw the timer
         let surface_text = self
             .default_font
             .render(format!("{:02}:{:02}:{:02}", h, m, s).as_str())
