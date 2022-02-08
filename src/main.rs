@@ -186,6 +186,13 @@ fn main() {
     );
     timer_win.visibility_toggle();
 
+    // Get the windows ids.
+    let slide_ids = slideshow_win.generic_win.get_win_ids();
+    let main_slide_id = slide_ids.get(0).unwrap();
+    let side_slide_id = slide_ids.get(1).unwrap();
+    let timer_ids = timer_win.generic_win.get_win_ids();
+    let timer_id = timer_ids.get(0).unwrap();
+
     // Request slides
     request_update_tx
         .send(())
@@ -205,20 +212,30 @@ fn main() {
             slideshow_win.set_slides(slides)
         };
         for event in event_pump.poll_iter() {
-            // Check if one of the 2 windows is highlighted.
-
-            if win_id
-                == *slideshow_win.generic_win.get_win_ids().get(0).unwrap()
-            {
-                slideshow_win.manage_keypress(&event);
-            } else if win_id
-                == *timer_win.generic_win.get_win_ids().get(0).unwrap()
-            {
-                timer_win.manage_keypress(&event);
+            match &win_id {
+                x if x == main_slide_id => {
+                    slideshow_win.manage_keypress(&event)
+                }
+                x if x == side_slide_id => {
+                    slideshow_win.manage_keypress(&event)
+                }
+                x if x == timer_id => timer_win.manage_keypress(&event),
+                _ => {}
             }
             // Then, match events that should always occur, whatever window is
             // highlighted.
             match event {
+                // If we click on "close" on the window itself.
+                Event::Window {
+                    window_id,
+                    win_event: sdl2::event::WindowEvent::Close,
+                    ..
+                } => match &window_id {
+                    x if x == main_slide_id => break 'running,
+                    x if x == side_slide_id => slideshow_win.toggle_sideslide(),
+                    x if x == timer_id => timer_win.visibility_toggle(),
+                    _ => {}
+                },
                 // Quit event, QUIT (I guess F4, C-c) or Q or ESC
                 Event::Quit { .. }
                 | Event::KeyUp {
