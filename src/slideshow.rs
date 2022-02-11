@@ -3,7 +3,7 @@
 use sdl2::pixels::Color as sdl_color;
 use std::collections::HashMap;
 
-/// A 2-D vector. Can also be used to store heights.
+/// A 2-D vector.
 /// Note that this contains float, since we are in "coordinates relative to
 /// the screen space" like (more or less)
 /// ```text
@@ -16,12 +16,17 @@ use std::collections::HashMap;
 ///   |                     |
 /// (0,1)-----------------(1,1)
 /// ```
-/// TODO This "coordinates" can also be interpreted as sizes, depending on
-/// where they are used. This should be changed to make the code cleaner.
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
-pub struct Vec2 {
+pub struct Position {
     pub x: f32,
     pub y: f32,
+}
+
+/// The size of some objects to be represented.
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+pub struct Size {
+    pub w: f32,
+    pub h: f32,
 }
 
 #[derive(
@@ -112,8 +117,8 @@ pub enum SectionMain {
 /// and so on and so forth.
 #[derive(serde::Serialize, serde::Deserialize, Debug, Default, PartialEq)]
 pub struct Section {
-    pub size: Option<Vec2>,
-    pub position: Option<Vec2>,
+    pub size: Option<Size>,
+    pub position: Option<Position>,
     pub sec_main: Option<SectionMain>,
 }
 
@@ -149,5 +154,5 @@ pub struct Slideshow {
     /// The default font color.
     pub font_col: Option<Color>,
     /// The default font size.
-    pub font_size: Option<Vec2>,
+    pub font_size: Option<Size>,
 }

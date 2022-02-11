@@ -5,7 +5,8 @@ use super::lexer::{CurrentState, Lexer};
 use super::tokenizer::{Structure, Token};
 
 use crate::slideshow::{
-    Color, Section, SectionFigure, SectionMain, SectionText, Slide, Vec2,
+    Color, Position, Section, SectionFigure, SectionMain, SectionText, Size,
+    Slide,
 };
 
 fn apply_slide<T, U>(
@@ -195,7 +196,7 @@ pub(super) fn manage_position(
                             .into())
                         }
                     };
-                    Vec2 { x: v1, y: v2 }
+                    Position { x: v1, y: v2 }
                 } else {
                     return Err("Position must have 2 tokens after it".into());
                 };
@@ -214,7 +215,7 @@ pub(super) fn manage_position(
 /// we change both x and y value based on that.
 fn get_size(
     tokens: &[Token],
-) -> Result<(Vec2, usize), Box<dyn Error + 'static>> {
+) -> Result<(Size, usize), Box<dyn Error + 'static>> {
     if let Some([t1, t2]) = tokens.get(0..2) {
         let skip;
         let mut v1 = match t1.symbol {
@@ -232,7 +233,7 @@ fn get_size(
             v1 = v1 / 10.0 * 0.012;
             v2
         };
-        Ok((Vec2 { x: v1, y: v2 }, skip))
+        Ok((Size { w: v1, h: v2 }, skip))
     } else if let Some(t) = tokens.get(0) {
         // Single value
         let (v1, v2) = if let Structure::Number(v) = t.symbol {
@@ -240,7 +241,7 @@ fn get_size(
         } else {
             return Err(format!("Expect a float, found {:?}", t).into());
         };
-        Ok((Vec2 { x: v1, y: v2 }, 1))
+        Ok((Size { w: v1, h: v2 }, 1))
     } else {
         Err("Size must have 1/2 tokens after it".into())
     }

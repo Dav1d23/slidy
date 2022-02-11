@@ -231,7 +231,7 @@ impl<'a> SlideShowWindow<'a> {
             None => sdl_color::BLACK.into(),
         };
         let font_size = match &self.slides.font_size {
-            Some(f) => (f.x, f.y),
+            Some(f) => (f.w, f.h),
             None => (0.018, 0.08),
         };
 
@@ -319,7 +319,7 @@ fn draw_single_section<'a>(
                             None => (0.01, 0.01),
                         };
                         let (x_size, y_size) = match &elem.size {
-                            Some(p) => (p.x, p.y),
+                            Some(p) => (p.w, p.h),
                             None => (0.1, 0.1),
                         };
                         let rect = utils::get_scaled_rect(
@@ -358,7 +358,7 @@ fn draw_single_section<'a>(
                     }
                     // Get the default size for each letter.
                     let (x_size, y_size) = match &elem.size {
-                        Some(p) => (p.x, p.y),
+                        Some(p) => (p.w, p.h),
                         None => font_size,
                     };
                     let (x_start, y_start) = match &elem.position {
