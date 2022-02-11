@@ -26,8 +26,8 @@ use std::time::Duration;
 
 // Slidy imports.
 
+use slidy::slideshow::Slideshow;
 use slidy::windows::slideshow::SlideShowWindow;
-use slidy::windows::slideshow::Slideshow;
 use slidy::windows::timer::TimerWindow;
 use slidy::windows::utils::{CanvasPresent, GetWinId};
 

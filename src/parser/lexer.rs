@@ -6,7 +6,7 @@ use std::path::Path;
 use super::tokenizer::{Structure, Token};
 use super::utils;
 
-use crate::windows::slideshow;
+use crate::slideshow;
 
 /// Helper to understand in which section we're in.
 /// It is based upon the tag we encountered while parsing.
@@ -131,7 +131,7 @@ mod test {
     use crate::parser::tokenizer::TokenSpan;
 
     use super::*;
-    use crate::windows::slideshow::*;
+    use crate::slideshow::*;
     use Structure::*;
 
     fn resources_path() -> PathBuf {

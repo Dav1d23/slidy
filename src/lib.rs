@@ -7,6 +7,7 @@ extern crate log;
 
 // Re-export modules.
 pub mod parser;
+pub mod slideshow;
 pub mod windows;
 
 /// Get the default, included font. It is the FreeMono one, and it is included

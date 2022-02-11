@@ -8,7 +8,7 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
 
-use crate::windows::slideshow::Slideshow;
+use crate::slideshow::Slideshow;
 
 /// Create the slides.
 fn parse_text(
@@ -52,7 +52,7 @@ mod test {
     use std::io::BufReader;
     use std::path::PathBuf;
 
-    use crate::windows::slideshow::SectionMain;
+    use crate::slideshow::SectionMain;
 
     /// Load and a file and check its existence.
     macro_rules! load_exists {

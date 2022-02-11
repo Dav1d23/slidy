@@ -4,7 +4,7 @@ use std::path::Path;
 use super::lexer::{CurrentState, Lexer};
 use super::tokenizer::{Structure, Token};
 
-use crate::windows::slideshow::{
+use crate::slideshow::{
     Color, Section, SectionFigure, SectionMain, SectionText, Slide, Vec2,
 };
 

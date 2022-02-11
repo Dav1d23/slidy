@@ -1,4 +1,4 @@
-use slidy::windows::slideshow::{
+use slidy::slideshow::{
     Section, SectionFigure, SectionMain, SectionText, Slide, Slideshow, Vec2,
 };
 

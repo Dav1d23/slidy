@@ -9,155 +9,7 @@ use sdl2::render::Texture;
 use sdl2::video::Window;
 
 use super::{utils, utils::GenericWindow};
-
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Copy, Clone, PartialEq,
-)]
-pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
-}
-
-impl From<Color> for sdl_color {
-    fn from(c: Color) -> Self {
-        sdl_color::from((c.r, c.g, c.b, c.a))
-    }
-}
-
-#[allow(clippy::many_single_char_names)]
-impl From<sdl_color> for Color {
-    fn from(c: sdl_color) -> Self {
-        let (r, g, b, a) = c.rgba();
-        Color { r, g, b, a }
-    }
-}
-
-impl From<(u8, u8, u8, u8)> for Color {
-    fn from(c: (u8, u8, u8, u8)) -> Self {
-        Color {
-            r: c.0,
-            g: c.1,
-            b: c.2,
-            a: c.3,
-        }
-    }
-}
-
-/// A 2-D vector. Can also be used to store heights.
-/// Note that this contains float, since we are in "coordinates relative to
-/// the screen space" like (more or less)
-/// ```text
-/// (0,0)-----------------(1,0)
-///   |                     |
-///   |      (0,8,0.2) -> * |
-///   |                     |
-///   | (0.6,0.6) -> *      |
-///   |                     |
-///   |                     |
-/// (0,1)-----------------(1,1)
-/// ```
-/// TODO This "coordinates" can also be interpreted as sizes, depending on
-/// where they are used. This should be changed to make the code cleaner.
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
-pub struct Vec2 {
-    pub x: f32,
-    pub y: f32,
-}
-
-/// How a text section should looks like.
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
-pub struct SectionText {
-    /// The text that should be rendered
-    pub text: String,
-    /// The color of the text
-    pub color: Option<Color>,
-    // The font name, must be aligned with the global one in the Slide struct
-    pub font: Option<String>,
-}
-
-impl Default for SectionText {
-    /// Get a default, new SectionText.
-    fn default() -> SectionText {
-        SectionText {
-            text: "".to_owned(),
-            color: None,
-            font: None,
-        }
-    }
-}
-
-/// How a figure section should looks like.
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
-pub struct SectionFigure {
-    pub path: String,
-    pub rotation: f32,
-}
-
-impl Default for SectionFigure {
-    /// Get a default, new SectionFigure.
-    fn default() -> SectionFigure {
-        SectionFigure {
-            path: "".to_owned(),
-            rotation: 0.0,
-        }
-    }
-}
-
-/// The main entry in each section.
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
-pub enum SectionMain {
-    // A figure
-    Figure(SectionFigure),
-    // A text section
-    Text(SectionText),
-}
-
-/// The internal representation for a `section`.
-/// The section can contain text, has a size, a position,
-/// and so on and so forth.
-#[derive(serde::Serialize, serde::Deserialize, Debug, Default, PartialEq)]
-pub struct Section {
-    pub size: Option<Vec2>,
-    pub position: Option<Vec2>,
-    pub sec_main: Option<SectionMain>,
-}
-
-/// The representation of a single slide.
-/// It has a background color and one or more sections.
-/// Each section contains either text, or an image, or both.
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
-pub struct Slide {
-    pub bg_color: Option<Color>,
-    pub sections: Vec<Section>,
-}
-
-impl Slide {
-    pub fn default() -> Slide {
-        let sections = vec![];
-        let bg_color = None;
-        Slide { bg_color, sections }
-    }
-}
-
-/// The whole slideshow we have to render.
-/// Note that some information might not be useful in case we would
-/// implement different back-ends, but this is not a problem now.
-#[derive(serde::Serialize, serde::Deserialize, Debug, Default)]
-pub struct Slideshow {
-    /// The slides to be shown.
-    pub slides: Vec<Slide>,
-    /// The hashmap containing the association between the
-    /// font names and their path.
-    pub fonts: HashMap<String, String>,
-    /// The default background color.
-    pub bg_col: Option<Color>,
-    /// The default font color.
-    pub font_col: Option<Color>,
-    /// The default font size.
-    pub font_size: Option<Vec2>,
-}
+use crate::slideshow;
 
 pub struct SlideShowWindow<'a> {
     /// Contains the generic information for a window
@@ -167,7 +19,7 @@ pub struct SlideShowWindow<'a> {
     /// If the slide has to be drawn again.
     is_changed: bool,
     /// All the slides in the slideshow.
-    slides: Slideshow,
+    slides: slideshow::Slideshow,
     // If the side slideshow should be visible.
     is_visible: bool,
     // Internal structure to hold the textures in order not to load them over
@@ -197,7 +49,7 @@ impl<'a> SlideShowWindow<'a> {
         );
         canvas_next.window_mut().hide();
 
-        let slides = Slideshow::default();
+        let slides = slideshow::Slideshow::default();
         SlideShowWindow {
             generic_win: GenericWindow {
                 canvases: vec![canvas, canvas_next],
@@ -294,7 +146,7 @@ impl<'a> SlideShowWindow<'a> {
     /// times. This means that this function may take some time.
     /// @TODO I can side-load the slides and the texture and then atomically
     /// switch, it is not probably worth the effort... But what does it here?
-    pub fn set_slides(&mut self, slides: Slideshow) {
+    pub fn set_slides(&mut self, slides: slideshow::Slideshow) {
         self.slides = slides;
         self.preload_textures();
         self.set_first_good_slide();
@@ -334,7 +186,9 @@ impl<'a> SlideShowWindow<'a> {
             let texture_creator = canvas.texture_creator();
             for elem in self.slides.slides.iter() {
                 for sec in elem.sections.iter() {
-                    if let Some(SectionMain::Figure(fig)) = &sec.sec_main {
+                    if let Some(slideshow::SectionMain::Figure(fig)) =
+                        &sec.sec_main
+                    {
                         if !texture_holder.contains_key(&fig.path) {
                             let res = texture_creator.load_texture(&fig.path);
                             if let Ok(texture) = res {
@@ -361,7 +215,7 @@ impl<'a> SlideShowWindow<'a> {
     pub fn present_slide(&mut self) {
         if self.slides.slides.is_empty() {
             // Nothing is given, get some "default" slide to show.
-            self.slides.slides.push(Slide::default())
+            self.slides.slides.push(slideshow::Slide::default())
         }
         self.set_first_good_slide();
         // prepare the rects where to write the text
@@ -446,16 +300,16 @@ impl<'a> SlideShowWindow<'a> {
 fn draw_single_section<'a>(
     canvas: &mut Canvas<Window>,
     textures: &HashMap<String, Texture>,
-    elem: &Section,
+    elem: &slideshow::Section,
     base_height: &mut f32,
     default_font: &sdl2::ttf::Font<'a, 'a>,
     font_size: (f32, f32),
-    font_col: Color,
+    font_col: slideshow::Color,
 ) {
     if let Some(sec_main) = &elem.sec_main {
         match sec_main {
             // Manage pictures
-            SectionMain::Figure(fig) => {
+            slideshow::SectionMain::Figure(fig) => {
                 {
                     let res = textures.get(&fig.path);
                     if let Some(texture) = res {
@@ -492,7 +346,7 @@ fn draw_single_section<'a>(
                 }
             }
             // Manage text
-            SectionMain::Text(SectionText {
+            slideshow::SectionMain::Text(slideshow::SectionText {
                 text,
                 color,
                 font: _new_font,
