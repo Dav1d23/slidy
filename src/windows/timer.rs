@@ -34,13 +34,10 @@ impl<'a> TimerWindow<'a> {
         h: u32,
         w: u32,
     ) -> Self {
-        let canvas = utils::get_canvas(context, resizable, h, w, "Timer");
         let timer_status = TimerStatus::Stopped;
         let total_elapsed = 0;
         TimerWindow {
-            generic_win: GenericWindow {
-                canvases: vec![canvas],
-            },
+            generic_win: GenericWindow::new(context, resizable, h, w, "Timer"),
             timer_status,
             total_elapsed,
             is_visible: true,
@@ -68,7 +65,7 @@ impl<'a> TimerWindow<'a> {
 
     /// Toggle visibility
     pub fn visibility_toggle(&mut self) {
-        let c = self.generic_win.canvases.get_mut(0).unwrap();
+        let c = &mut self.generic_win.canvas;
         if self.is_visible {
             c.window_mut().hide();
         } else {
@@ -124,7 +121,7 @@ impl<'a> TimerWindow<'a> {
     /// Main method to show a slide on the screen.
     pub fn update(&mut self, slides_tot: usize, slides_idx: usize) {
         let (h, m, s) = self.get_time();
-        let c = self.generic_win.canvases.get_mut(0).unwrap();
+        let c = &mut self.generic_win.canvas;
         utils::canvas_change_color(c, Color::CYAN);
         // Draw the timer
         let surface_text = self

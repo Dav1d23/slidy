@@ -26,7 +26,6 @@ use structopt::StructOpt;
 
 use slidy::windows::slideshow::SlideShowWindow;
 use slidy::windows::timer::TimerWindow;
-use slidy::windows::utils::{CanvasPresent, GetWinId};
 
 // Local modules.
 
@@ -187,11 +186,9 @@ fn main() {
     timer_win.visibility_toggle();
 
     // Get the windows ids.
-    let slide_ids = slideshow_win.generic_win.get_win_ids();
-    let main_slide_id = slide_ids.get(0).unwrap();
-    let side_slide_id = slide_ids.get(1).unwrap();
-    let timer_ids = timer_win.generic_win.get_win_ids();
-    let timer_id = timer_ids.get(0).unwrap();
+    let main_slide_id = slideshow_win.main_win.id;
+    let side_slide_id = slideshow_win.side_win.id;
+    let timer_id = timer_win.generic_win.id;
 
     // Request slides
     request_update_tx
@@ -212,7 +209,7 @@ fn main() {
             slideshow_win.set_slides(slides)
         };
         for event in event_pump.poll_iter() {
-            match &win_id {
+            match win_id {
                 x if x == main_slide_id => {
                     slideshow_win.manage_keypress(&event)
                 }
@@ -230,7 +227,7 @@ fn main() {
                     window_id,
                     win_event: sdl2::event::WindowEvent::Close,
                     ..
-                } => match &window_id {
+                } => match window_id {
                     x if x == main_slide_id => break 'running,
                     x if x == side_slide_id => slideshow_win.toggle_sideslide(),
                     x if x == timer_id => timer_win.visibility_toggle(),
@@ -272,13 +269,15 @@ fn main() {
             slideshow_win.present_slide();
             slideshow_win.set_changed(false);
         }
-        slideshow_win.generic_win.canvases_present();
 
         // Update timer window
         // timer_win.update_pseudo_random_position();
         let (slide_idx, slide_len) = slideshow_win.get_slides_counters();
         timer_win.update(slide_len, slide_idx + 1);
-        timer_win.generic_win.canvases_present();
+
+        slideshow_win.main_win.canvas.present();
+        slideshow_win.side_win.canvas.present();
+        timer_win.generic_win.canvas.present();
 
         match timer.elapsed() {
             Ok(elapsed) => {

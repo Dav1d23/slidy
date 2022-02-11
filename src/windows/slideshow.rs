@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use sdl2::event::Event;
-use sdl2::image::LoadTexture;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color as sdl_color;
 use sdl2::render::Canvas;
@@ -13,7 +12,8 @@ use crate::slideshow;
 
 pub struct SlideShowWindow<'a> {
     /// Contains the generic information for a window
-    pub generic_win: GenericWindow,
+    pub main_win: GenericWindow,
+    pub side_win: GenericWindow,
     /// The actual slide being shown.
     idx: usize,
     /// If the slide has to be drawn again.
@@ -21,10 +21,9 @@ pub struct SlideShowWindow<'a> {
     /// All the slides in the slideshow.
     slides: slideshow::Slideshow,
     // If the side slideshow should be visible.
-    is_visible: bool,
+    pub side_win_is_visible: bool,
     // Internal structure to hold the textures in order not to load them over
     // and over.
-    textures: Vec<HashMap<String, Texture>>,
     /// The default font to be used.
     default_font: &'a sdl2::ttf::Font<'a, 'a>,
 }
@@ -37,29 +36,26 @@ impl<'a> SlideShowWindow<'a> {
         h: u32,
         w: u32,
     ) -> Self {
-        // The main canvas for the main slides
-        let canvas = utils::get_canvas(context, resizable, h, w, "SlideShow");
-        // The next slide
-        let mut canvas_next = utils::get_canvas(
+        let main_win =
+            GenericWindow::new(context, resizable, h, w, "Slideshow");
+        let mut side_win = GenericWindow::new(
             context,
             resizable,
             h,
             w,
-            "SlideShow: next slide",
+            "Slideshow: next slide",
         );
-        canvas_next.window_mut().hide();
+        side_win.canvas.window_mut().hide();
 
         let slides = slideshow::Slideshow::default();
         SlideShowWindow {
-            generic_win: GenericWindow {
-                canvases: vec![canvas, canvas_next],
-            },
+            main_win,
+            side_win,
             idx: 0,
             is_changed: true,
             slides,
-            textures: vec![HashMap::new(), HashMap::new()],
             default_font: font,
-            is_visible: false,
+            side_win_is_visible: false,
         }
     }
 
@@ -74,13 +70,13 @@ impl<'a> SlideShowWindow<'a> {
     /// Toggle visibility
     pub fn toggle_sideslide(&mut self) {
         // The side slide is with index 1.
-        let c = self.generic_win.canvases.get_mut(1).unwrap();
-        if self.is_visible {
+        let c = &mut self.side_win.canvas;
+        if self.side_win_is_visible {
             c.window_mut().hide();
         } else {
             c.window_mut().show();
         }
-        self.is_visible = !self.is_visible;
+        self.side_win_is_visible = !self.side_win_is_visible;
     }
 
     pub fn get_slides_counters(&self) -> (usize, usize) {
@@ -154,58 +150,15 @@ impl<'a> SlideShowWindow<'a> {
     }
 
     fn preload_textures(&mut self) {
-        let keys: Vec<String> = self
-            .textures
-            .get(0)
-            .unwrap()
-            .iter()
-            .map(|(k, _)| String::from(k))
-            .collect();
+        self.main_win.remove_textures();
+        self.side_win.remove_textures();
 
-        // Remove the old textures from the 2 old maps.
-        for ref mut texture_holder in self.textures.iter_mut() {
-            for el in &keys {
-                let elem = texture_holder.remove(el).unwrap();
-                // @safety This is ok. These textures will never be used
-                // again, we can safely remove them.
-                // @todo why is this not used again?
-                unsafe {
-                    elem.destroy();
-                }
-            }
-            texture_holder.clear();
-        }
-
-        // Add all the new textures to all the canvases.
-        for (canvas, texture_holder) in self
-            .generic_win
-            .canvases
-            .iter_mut()
-            .zip(self.textures.iter_mut())
-        {
-            let texture_creator = canvas.texture_creator();
-            for elem in self.slides.slides.iter() {
-                for sec in elem.sections.iter() {
-                    if let Some(slideshow::SectionMain::Figure(fig)) =
-                        &sec.sec_main
-                    {
-                        if !texture_holder.contains_key(&fig.path) {
-                            let res = texture_creator.load_texture(&fig.path);
-                            if let Ok(texture) = res {
-                                debug!(
-                                    "Loading {} into the hashmap.",
-                                    &fig.path
-                                );
-                                texture_holder
-                                    .insert(String::from(&fig.path), texture);
-                            } else {
-                                error!(
-                                    "Error while loading to show: {}",
-                                    fig.path
-                                );
-                            }
-                        }
-                    }
+        for elem in self.slides.slides.iter() {
+            for sec in elem.sections.iter() {
+                if let Some(slideshow::SectionMain::Figure(fig)) = &sec.sec_main
+                {
+                    self.main_win.add_texture(&fig.path);
+                    self.side_win.add_texture(&fig.path);
                 }
             }
         }
@@ -242,14 +195,11 @@ impl<'a> SlideShowWindow<'a> {
             None => bg_col.into(),
         };
         {
-            utils::canvas_change_color(
-                self.generic_win.canvases.get_mut(0).unwrap(),
-                col,
-            );
+            utils::canvas_change_color(&mut self.main_win.canvas, col);
 
-            let canvas = self.generic_win.canvases.get_mut(0).unwrap();
+            let canvas = &mut self.main_win.canvas;
 
-            let textures = self.textures.get(0).unwrap();
+            let textures = &mut self.main_win.textures;
 
             for elem in self.slides.slides[self.idx].sections.iter() {
                 draw_single_section(
@@ -276,11 +226,11 @@ impl<'a> SlideShowWindow<'a> {
             None => bg_col,
         };
         {
-            let canvas = self.generic_win.canvases.get_mut(1).unwrap();
+            let canvas = &mut self.side_win.canvas;
 
             utils::canvas_change_color(canvas, col.into());
 
-            let textures = self.textures.get(0).unwrap();
+            let textures = &mut self.side_win.textures;
 
             for elem in self.slides.slides[next_idx].sections.iter() {
                 draw_single_section(

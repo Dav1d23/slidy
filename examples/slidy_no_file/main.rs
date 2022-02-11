@@ -5,7 +5,6 @@ extern crate log;
 
 // Std imports.
 
-use std::str::FromStr;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -15,78 +14,25 @@ use env_logger::{Builder, WriteStyle};
 use log::LevelFilter;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use structopt::StructOpt;
 
 // Slidylib imports.
 
 use slidy::windows::slideshow::SlideShowWindow;
-use slidy::windows::utils::CanvasPresent;
 
 // Local modules.
 
 mod slides;
 
-/// Define the window options.
-pub struct ScreenOptions {
-    pub h: u32,
-    pub w: u32,
-    pub resizable: bool,
-    pub fullscreen: bool,
-}
-
-#[derive(Debug, structopt::StructOpt)]
-/// My Amazing Personal Slideshow command line options.
-struct Args {
-    #[structopt(short = "l", long = "log-level", default_value = "INFO")]
-    /// The log level to be used.
-    log_level: String,
-    #[structopt(short = "w", long = "window-size", default_value = "800x600")]
-    /// Window size, expressed as <h>x<w>.
-    winsize: String,
-    #[structopt(long = "fixed-size")]
-    /// If set, the user can't resize the window, which will be stuck to window-size
-    /// Note: looks like "down-resizing" is always possible...
-    fixed_size: bool,
-}
-
 #[doc(hidden)]
 fn main() {
-    let args = Args::from_args();
-
-    let level = LevelFilter::from_str(&args.log_level)
-        .expect("Please provide a valid log level.");
+    let level = LevelFilter::Info;
 
     // Init logger.
     let mut log_builder = Builder::new();
     log_builder
-        .filter(None, level)
+        .filter_level(level)
         .write_style(WriteStyle::Always)
         .init();
-
-    info!("Using log level: {}", level);
-
-    // Parse the window size value.
-    let (h, w) = match args
-        .winsize
-        .split('x')
-        .map(|e| {
-            e.parse().unwrap_or_else(|_| {
-                panic!("Unable to parse `{}` into u32", e)
-            })
-        })
-        .collect::<Vec<u32>>().as_slice() {
-            [a, b] => (*a, *b),
-            _ => panic!(
-                "Must provide 2 parameters for the winsize, found more than that :)",
-            ),
-        };
-
-    let screen_options = ScreenOptions {
-        h,
-        w,
-        fullscreen: false,
-        resizable: !args.fixed_size,
-    };
 
     // Init stuffs
     let sdl_context = slidy::get_sdl_context();
@@ -97,9 +43,9 @@ fn main() {
     let mut slideshow_win = SlideShowWindow::new(
         &sdl_context,
         &free_mono,
-        screen_options.resizable,
-        screen_options.h,
-        screen_options.w,
+        true,
+        800,
+        600,
     );
 
     // Selected slide
@@ -137,7 +83,7 @@ fn main() {
         }
 
         slideshow_win.present_slide();
-        slideshow_win.generic_win.canvases_present();
+        slideshow_win.main_win.canvas.present();
 
         let (_slide_idx, slide_len) = slideshow_win.get_slides_counters();
 

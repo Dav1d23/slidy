@@ -1,33 +1,109 @@
+use std::collections::HashMap;
+
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::Canvas;
+use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 
+/// A Generic SDL window.
 pub struct GenericWindow {
     /// All the canvases where we need to draw.
-    pub canvases: Vec<Canvas<Window>>,
+    pub canvas: Canvas<Window>,
+    /// The textures related to the canvas.
+    pub textures: HashMap<String, Texture>,
+    /// The window id.
+    pub id: u32,
 }
 
-pub trait GetWinId {
-    fn get_win_ids(&self) -> Vec<u32>;
-}
+impl GenericWindow {
+    pub fn new(
+        context: &sdl2::Sdl,
+        resizable: bool,
+        height: u32,
+        width: u32,
+        name: &str,
+    ) -> GenericWindow {
+        let video_subsystem = context
+            .video()
+            .expect("Unable to build the video subsystem?");
+        video_subsystem
+            .gl_load_library_default()
+            .expect("unable to initialize opengl");
 
-pub trait CanvasPresent {
-    fn canvases_present(&mut self) {}
-}
+        // Create window, canvas
+        let mut windowbuilder = video_subsystem.window(name, height, width);
+        if resizable {
+            windowbuilder.resizable();
+        }
+        let window = windowbuilder.build().expect("Unable to build the window");
 
-impl GetWinId for GenericWindow {
-    fn get_win_ids(&self) -> Vec<u32> {
-        self.canvases
-            .iter()
-            .map(|c| c.window().id())
-            .collect::<Vec<u32>>()
+        let canvas = match window
+            .into_canvas()
+            .target_texture()
+            .accelerated()
+            .build()
+        {
+            Err(_) => {
+                warn!(
+                    "Unable to build an accelerated context, trying the plain one."
+                );
+                // If accelerated is does not work, try not accelerated one.
+                windowbuilder = video_subsystem.window(name, height, width);
+                if resizable {
+                    windowbuilder.resizable();
+                }
+                let window =
+                    windowbuilder.build().expect("Unable to build the window");
+
+                window.into_canvas().target_texture().build().expect(
+                    "Unable to build even the non-accelerated window...",
+                )
+            }
+            Ok(c) => c,
+        };
+
+        let id = &canvas.window().id();
+        GenericWindow {
+            canvas,
+            textures: HashMap::new(),
+            id: *id,
+        }
     }
-}
 
-impl CanvasPresent for GenericWindow {
-    fn canvases_present(&mut self) {
-        self.canvases.iter_mut().for_each(|c| c.present());
+    /// Clean the textures hashmap, by destroying them.
+    pub fn remove_textures(&mut self) {
+        // Remove the old textures
+        for (_name, texture) in self.textures.drain() {
+            // Safety: we are cleaning the map at the same time, so we won't be
+            // able to find the textures anyway after this.
+            unsafe { texture.destroy() };
+        }
+        self.textures.clear();
+    }
+
+    /// Add the texture that can be found at texture_path, and use that path as
+    /// a key to retrieve it.
+    pub fn add_texture<T>(&mut self, texture_path: &T)
+    where
+        T: AsRef<str>,
+    {
+        // Put the textures in the map.
+        let texture_creator = self.canvas.texture_creator();
+
+        use sdl2::image::LoadTexture;
+        if !self.textures.contains_key(texture_path.as_ref()) {
+            let res = texture_creator.load_texture(texture_path.as_ref());
+            if let Ok(texture) = res {
+                debug!("Loading {} into the hashmap.", texture_path.as_ref());
+                self.textures
+                    .insert(String::from(texture_path.as_ref()), texture);
+            } else {
+                error!(
+                    "Error while loading to show: {}",
+                    texture_path.as_ref()
+                );
+            }
+        }
     }
 }
 
@@ -50,55 +126,6 @@ pub fn get_scaled_rect(win: &Window, x: f32, y: f32, w: f32, h: f32) -> Rect {
         warn!("Building rect outside of the visible area: {:?}", rect);
     }
     rect
-}
-
-/// Get a canvas out of an sdl context.
-/// Note that to extract the canvas, we build the window (if accelerated is not
-/// possible, we build the non-accelerated one) and then we get the canvas out
-/// of it.
-/// @todo <dp> instead of passing the canvas around, it should and could be
-/// possible to give the window itself to the "window" manager and let it do
-/// what it wants.
-pub fn get_canvas(
-    context: &sdl2::Sdl,
-    resizable: bool,
-    height: u32,
-    width: u32,
-    name: &str,
-) -> sdl2::render::Canvas<sdl2::video::Window> {
-    let video_subsystem = context
-        .video()
-        .expect("Unable to build the video subsystem?");
-    video_subsystem
-        .gl_load_library_default()
-        .expect("unable to initialize opengl");
-
-    // Create window, canvas
-    let mut windowbuilder = video_subsystem.window(name, height, width);
-    if resizable {
-        windowbuilder.resizable();
-    }
-    let window = windowbuilder.build().expect("Unable to build the window");
-
-    match window.into_canvas().target_texture().accelerated().build() {
-        Ok(res) => return res,
-        Err(_) => warn!(
-            "Unable to build an accelerated context, trying the plain one."
-        ),
-    }
-
-    // If accelerated is does not work, try not accelerated one.
-    windowbuilder = video_subsystem.window(name, height, width);
-    if resizable {
-        windowbuilder.resizable();
-    }
-    let window = windowbuilder.build().expect("Unable to build the window");
-
-    window
-        .into_canvas()
-        .target_texture()
-        .build()
-        .expect("Unable to build even the non-accelerated window...")
 }
 
 /// Change the color of a canvas.

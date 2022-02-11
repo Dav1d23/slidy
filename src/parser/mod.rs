@@ -94,7 +94,7 @@ mod test {
             .map_err(|e| panic!("Unable to read the slides: {}", e))
             .unwrap();
 
-        assert_eq!(slideshow.slides.len(), 2);
+        assert_eq!(slideshow.slides.len(), 1);
     }
 
     #[test]
