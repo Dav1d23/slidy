@@ -19,18 +19,23 @@ Slides can be defined this way using the slidy's language:
 :ge :bc green :fc yellow :sz 16
 
 :sl
-:tb :sz 20 :fc red
-This is title 1
-:tb :ps 0.1 0.3
+:tb :sz 40 :fc red
+BIG TITLE
+:tb
 A line
-  Another line
-    And the last one
+  Note that it starts just below the title!
 
 :sl
-:tb :sz 20 :fc blue
-And title 2
-:tb :ps 0.1 0.3
-Some other content
+:tb :sz 10 :fc blue
+Small title now
+:tb
+But again, the line is just below the title
+
+:sl
+:tb :ps 0.3 0.3 :fc fuchsia
+ We can also
+center the text
+ manually!
 ```
 
 This will give you 2 slides with red title and some content.

@@ -121,8 +121,8 @@ pub fn get_scaled_rect(win: &Window, x: f32, y: f32, w: f32, h: f32) -> Rect {
     let rect = Rect::new(nx as i32, ny as i32, nw as u32, nh as u32);
 
     if (nx + nw) > sx || (ny + nh) > sy {
-        // Something will not fit in the image, show an log,
-        // but still display things.
+        // Something will not fit in the image, show a log,
+        // but still display the thing that lives on the screen area.
         warn!("Building rect outside of the visible area: {:?}", rect);
     }
     rect
