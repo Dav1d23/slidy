@@ -17,7 +17,7 @@ use sdl2::keyboard::Keycode;
 
 // Slidylib imports.
 
-use slidy::windows::slideshow::SlideShowWindow;
+use slidy::backend_sdl::slideshow::SlideShowWindow;
 
 // Local modules.
 
@@ -35,9 +35,9 @@ fn main() {
         .init();
 
     // Init stuffs
-    let sdl_context = slidy::get_sdl_context();
-    let ttf_context = slidy::get_ttf_context();
-    let free_mono = slidy::get_default_font(&ttf_context);
+    let sdl_context = slidy::backend_sdl::get_sdl_context();
+    let ttf_context = slidy::backend_sdl::get_ttf_context();
+    let free_mono = slidy::backend_sdl::get_default_font(&ttf_context);
 
     // 1. The slideshow window
     let mut slideshow_win = SlideShowWindow::new(

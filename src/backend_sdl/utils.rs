@@ -136,3 +136,18 @@ pub fn canvas_change_color(
     canvas.set_draw_color(color);
     canvas.clear();
 }
+
+impl From<crate::slideshow::Color> for Color {
+    fn from(c: crate::slideshow::Color) -> Self {
+        Color::from((c.r, c.g, c.b, c.a))
+    }
+}
+
+#[allow(clippy::many_single_char_names)]
+impl From<Color> for crate::slideshow::Color {
+    fn from(c: Color) -> Self {
+        let (r, g, b, a) = c.rgba();
+        crate::slideshow::Color { r, g, b, a }
+    }
+}
+
