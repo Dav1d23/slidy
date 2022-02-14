@@ -1,6 +1,5 @@
 //! The slideshow definition.
 
-use sdl2::pixels::Color as sdl_color;
 use std::collections::HashMap;
 
 /// A 2-D vector.
@@ -37,20 +36,6 @@ pub struct Color {
     pub g: u8,
     pub b: u8,
     pub a: u8,
-}
-
-impl From<Color> for sdl_color {
-    fn from(c: Color) -> Self {
-        sdl_color::from((c.r, c.g, c.b, c.a))
-    }
-}
-
-#[allow(clippy::many_single_char_names)]
-impl From<sdl_color> for Color {
-    fn from(c: sdl_color) -> Self {
-        let (r, g, b, a) = c.rgba();
-        Color { r, g, b, a }
-    }
 }
 
 impl From<(u8, u8, u8, u8)> for Color {
