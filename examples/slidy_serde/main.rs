@@ -22,10 +22,8 @@ use std::time::Duration;
 
 use slidy::backend_sdl::slideshow::SlideShowWindow;
 
-
 #[doc(hidden)]
 fn main() {
-
     let level = LevelFilter::Info;
 
     // Init logger.
@@ -41,13 +39,8 @@ fn main() {
     let free_mono = slidy::backend_sdl::get_default_font(&ttf_context);
 
     // 1. The slideshow window
-    let mut slideshow_win = SlideShowWindow::new(
-        &sdl_context,
-        &free_mono,
-        true,
-        800,
-        600,
-    );
+    let mut slideshow_win =
+        SlideShowWindow::new(&sdl_context, &free_mono, true, 800, 600);
 
     // Set the slides.
     let file_content = include_str!("./resources/input_file.json");
@@ -71,7 +64,7 @@ fn main() {
                     keycode: Some(Keycode::Q),
                     ..
                 } => break 'running,
-                _ => {},
+                _ => {}
             }
         }
 

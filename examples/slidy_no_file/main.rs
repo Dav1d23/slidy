@@ -40,13 +40,8 @@ fn main() {
     let free_mono = slidy::backend_sdl::get_default_font(&ttf_context);
 
     // 1. The slideshow window
-    let mut slideshow_win = SlideShowWindow::new(
-        &sdl_context,
-        &free_mono,
-        true,
-        800,
-        600,
-    );
+    let mut slideshow_win =
+        SlideShowWindow::new(&sdl_context, &free_mono, true, 800, 600);
 
     // Selected slide
     let mut slide_counter = 0;

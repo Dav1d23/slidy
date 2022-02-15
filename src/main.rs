@@ -202,6 +202,7 @@ fn main() {
     let mut event_pump = sdl_context
         .event_pump()
         .expect("Unable to get the event pump");
+
     'running: loop {
         let timer = std::time::SystemTime::now();
         // Check if we have new slides
@@ -260,14 +261,14 @@ fn main() {
                     ..
                 }
                 | Event::MouseMotion { window_id, .. } => win_id = window_id,
-                _ => slideshow_win.set_changed(true),
+                _ => slideshow_win.is_changed = true,
             }
         }
 
         // Update slideshow window
-        if slideshow_win.is_changed() {
+        if slideshow_win.is_changed {
             slideshow_win.present_slide();
-            slideshow_win.set_changed(false);
+            slideshow_win.is_changed = false;
         }
 
         // Update timer window

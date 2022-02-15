@@ -6,6 +6,6 @@ extern crate env_logger;
 extern crate log;
 
 // Re-export modules.
+pub mod backend_sdl;
 pub mod parser;
 pub mod slideshow;
-pub mod backend_sdl;
