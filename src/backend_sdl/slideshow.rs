@@ -1,11 +1,6 @@
-use std::collections::HashMap;
-
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color as sdl_color;
-use sdl2::render::Canvas;
-use sdl2::render::Texture;
-use sdl2::video::Window;
 
 use super::{utils, utils::GenericWindow};
 use crate::slideshow;
@@ -17,7 +12,7 @@ pub struct SlideShowWindow<'a> {
     /// The actual slide being shown.
     idx: usize,
     /// If the slide has to be drawn again.
-    is_changed: bool,
+    pub is_changed: bool,
     /// All the slides in the slideshow.
     slides: slideshow::Slideshow,
     // If the side slideshow should be visible.
@@ -59,17 +54,8 @@ impl<'a> SlideShowWindow<'a> {
         }
     }
 
-    pub fn is_changed(&self) -> bool {
-        self.is_changed
-    }
-
-    pub fn set_changed(&mut self, how: bool) {
-        self.is_changed = how;
-    }
-
     /// Toggle visibility
     pub fn toggle_sideslide(&mut self) {
-        // The side slide is with index 1.
         let c = &mut self.side_win.canvas;
         if self.side_win_is_visible {
             c.window_mut().hide();
@@ -175,87 +161,61 @@ impl<'a> SlideShowWindow<'a> {
         // this is a loop over all the "sections" of a slide.
         // We technically "could" store the positions in order not to
         // recompute everything each time, but... Is it worth it? :)
-        let bg_col = match self.slides.bg_col {
-            Some(c) => c,
-            None => sdl_color::WHITE.into(),
-        };
-        let font_col = match self.slides.font_col {
-            Some(c) => c,
-            None => sdl_color::BLACK.into(),
-        };
-        let font_size = match &self.slides.font_size {
-            Some(f) => (f.w, f.h),
-            None => (0.018, 0.08),
-        };
+        let bg_col = self
+            .slides
+            .bg_col
+            .unwrap_or_else(|| sdl_color::WHITE.into());
+        let font_col = self
+            .slides
+            .font_col
+            .unwrap_or_else(|| sdl_color::BLACK.into());
+        let font_size = self
+            .slides
+            .font_size
+            .as_ref()
+            .map(|r| (r.w, r.h))
+            .unwrap_or((0.018, 0.08));
 
         // First slide window.
-        let mut base_height: f32 = 0.01;
-        let col = match self.slides.slides[self.idx].bg_color {
-            Some(c) => c.into(),
-            None => bg_col.into(),
-        };
-        {
-            utils::canvas_change_color(&mut self.main_win.canvas, col);
-
-            let canvas = &mut self.main_win.canvas;
-
-            let textures = &mut self.main_win.textures;
-
-            for elem in self.slides.slides[self.idx].sections.iter() {
-                draw_single_section(
-                    canvas,
-                    textures,
-                    elem,
-                    &mut base_height,
-                    self.default_font,
-                    font_size,
-                    font_col,
-                );
-            }
-        }
+        draw_sections(
+            self.idx,
+            &mut self.slides.slides,
+            bg_col,
+            &mut self.main_win,
+            font_size,
+            font_col,
+            self.default_font,
+        );
 
         // Second slide window.
-        let mut base_height: f32 = 0.01;
         let next_idx = if self.idx < self.slides.slides.len() - 1 {
             self.idx + 1
         } else {
             self.idx
         };
-        let col = match self.slides.slides[next_idx].bg_color {
-            Some(c) => c,
-            None => bg_col,
-        };
-        {
-            let canvas = &mut self.side_win.canvas;
-
-            utils::canvas_change_color(canvas, col.into());
-
-            let textures = &mut self.side_win.textures;
-
-            for elem in self.slides.slides[next_idx].sections.iter() {
-                draw_single_section(
-                    canvas,
-                    textures,
-                    elem,
-                    &mut base_height,
-                    self.default_font,
-                    font_size,
-                    font_col,
-                );
-            }
-        }
+        draw_sections(
+            next_idx,
+            &mut self.slides.slides,
+            bg_col,
+            &mut self.side_win,
+            font_size,
+            font_col,
+            self.default_font,
+        );
     }
 }
 
 fn draw_single_section<'a>(
-    canvas: &mut Canvas<Window>,
-    textures: &HashMap<String, Texture>,
+    window: &mut GenericWindow,
     elem: &slideshow::Section,
     base_height: &mut f32,
     default_font: &sdl2::ttf::Font<'a, 'a>,
     font_size: (f32, f32),
     font_col: slideshow::Color,
 ) {
+    let canvas = &mut window.canvas;
+    let textures = &mut window.textures;
+
     if let Some(sec_main) = &elem.sec_main {
         match sec_main {
             // Manage pictures
@@ -350,6 +310,33 @@ fn draw_single_section<'a>(
                     }
                 }
             }
+        }
+    }
+}
+
+fn draw_sections(
+    idx: usize,
+    slides: &mut Vec<slideshow::Slide>,
+    bg_col: slideshow::Color,
+    window: &mut GenericWindow,
+    font_size: (f32, f32),
+    font_col: slideshow::Color,
+    default_font: &sdl2::ttf::Font<'_, '_>,
+) {
+    let mut base_height: f32 = 0.01;
+    let col = slides[idx].bg_color.unwrap_or(bg_col).into();
+    {
+        utils::canvas_change_color(&mut window.canvas, col);
+
+        for section in slides[idx].sections.iter() {
+            draw_single_section(
+                window,
+                section,
+                &mut base_height,
+                default_font,
+                font_size,
+                font_col,
+            );
         }
     }
 }

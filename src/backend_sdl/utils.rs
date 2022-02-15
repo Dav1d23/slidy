@@ -150,4 +150,3 @@ impl From<Color> for crate::slideshow::Color {
         crate::slideshow::Color { r, g, b, a }
     }
 }
-
