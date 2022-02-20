@@ -23,13 +23,13 @@ pub struct TimerWindow<'a> {
     /// If the window is visible
     is_visible: bool,
     /// The default font to be used.
-    default_font: &'a sdl2::ttf::Font<'a, 'a>,
+    default_font: sdl2::ttf::Font<'a, 'a>,
 }
 
 impl<'a> TimerWindow<'a> {
     pub fn new(
         context: &sdl2::Sdl,
-        font: &'a sdl2::ttf::Font,
+        font: sdl2::ttf::Font<'a, 'a>,
         resizable: bool,
         h: u32,
         w: u32,
