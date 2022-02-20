@@ -1,3 +1,5 @@
+//! Window used to show the slides.
+
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color as sdl_color;
@@ -5,6 +7,7 @@ use sdl2::pixels::Color as sdl_color;
 use super::{utils, utils::GenericWindow};
 use crate::slideshow;
 
+/// The window holding the slideshow.
 pub struct SlideShowWindow<'a> {
     /// Contains the generic information for a window
     pub main_win: GenericWindow,
@@ -20,13 +23,13 @@ pub struct SlideShowWindow<'a> {
     // Internal structure to hold the textures in order not to load them over
     // and over.
     /// The default font to be used.
-    default_font: &'a sdl2::ttf::Font<'a, 'a>,
+    default_font: sdl2::ttf::Font<'a, 'a>,
 }
 
 impl<'a> SlideShowWindow<'a> {
     pub fn new(
         context: &sdl2::Sdl,
-        font: &'a sdl2::ttf::Font,
+        font: sdl2::ttf::Font<'a, 'a>,
         resizable: bool,
         h: u32,
         w: u32,
@@ -184,7 +187,7 @@ impl<'a> SlideShowWindow<'a> {
             &mut self.main_win,
             font_size,
             font_col,
-            self.default_font,
+            &self.default_font,
         );
 
         // Second slide window.
@@ -200,7 +203,7 @@ impl<'a> SlideShowWindow<'a> {
             &mut self.side_win,
             font_size,
             font_col,
-            self.default_font,
+            &self.default_font,
         );
     }
 }

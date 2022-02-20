@@ -18,24 +18,11 @@ use std::time::Duration;
 use env_logger::{Builder, WriteStyle};
 use log::LevelFilter;
 use notify::{raw_watcher, RecursiveMode, Watcher};
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
 use structopt::StructOpt;
-
-// Slidy imports.
-
-use slidy::backend_sdl::slideshow::SlideShowWindow;
-use slidy::backend_sdl::timer::TimerWindow;
 
 // Local modules.
 
-/// Define the window options.
-pub struct ScreenOptions {
-    pub h: u32,
-    pub w: u32,
-    pub resizable: bool,
-    pub fullscreen: bool,
-}
+use slidy::backend_sdl;
 
 #[derive(Debug, structopt::StructOpt)]
 /// My Amazing Personal Slideshow command line options.
@@ -87,7 +74,7 @@ fn main() {
             ),
         };
 
-    let screen_options = ScreenOptions {
+    let screen_options = backend_sdl::WindowOptions {
         h,
         w,
         fullscreen: false,
@@ -153,6 +140,11 @@ fn main() {
         }
     });
 
+    // Request slides
+    request_update_tx
+        .send(())
+        .expect("Unable to request slide update");
+
     // ... And finally the main graphical loop. This will receive new slides in the send_slides
     // channel and show them whenever they are ready. Moreover, it can send update requests to
     // to the request_update channel - even if this is only useful on initialization to tell
@@ -160,125 +152,26 @@ fn main() {
     // It could also have been done with a reference to the slider, maybe, but this looks nicer
     // since I want the slider to live on another thread.
 
-    // Init stuffs
-    let sdl_context = slidy::backend_sdl::get_sdl_context();
-    let ttf_context = slidy::backend_sdl::get_ttf_context();
-    let free_mono = slidy::backend_sdl::get_default_font(&ttf_context);
+    // Init backend and context.
+    let backend = backend_sdl::Backend::new();
+    let mut context = backend.get_context(screen_options);
 
-    // 1. The slideshow window
-    let mut slideshow_win = SlideShowWindow::new(
-        &sdl_context,
-        &free_mono,
-        screen_options.resizable,
-        screen_options.h,
-        screen_options.w,
-    );
-
-    // 2. The timer window
-    // @todo <dp> create options for the size of this window as well?
-    let mut timer_win = TimerWindow::new(
-        &sdl_context,
-        &free_mono,
-        screen_options.resizable,
-        screen_options.h / 5,
-        screen_options.w / 5,
-    );
-    timer_win.visibility_toggle();
-
-    // Get the windows ids.
-    let main_slide_id = slideshow_win.main_win.id;
-    let side_slide_id = slideshow_win.side_win.id;
-    let timer_id = timer_win.generic_win.id;
-
-    // Request slides
-    request_update_tx
-        .send(())
-        .expect("Unable to request slide update");
-    let mut win_id: u32 = 0;
-
+    // Fix the max fps.
     let fixed_fps = Duration::from_nanos(1_000_000_000 / 10);
 
-    // Event loop
-    let mut event_pump = sdl_context
-        .event_pump()
-        .expect("Unable to get the event pump");
-
+    // The event loop.
     'running: loop {
         let timer = std::time::SystemTime::now();
         // Check if we have new slides
         if let Ok(slides) = send_slides_rx.try_recv() {
-            slideshow_win.set_slides(slides)
+            context.slideshow_win.set_slides(slides)
         };
-        for event in event_pump.poll_iter() {
-            match win_id {
-                x if x == main_slide_id => {
-                    slideshow_win.manage_keypress(&event)
-                }
-                x if x == side_slide_id => {
-                    slideshow_win.manage_keypress(&event)
-                }
-                x if x == timer_id => timer_win.manage_keypress(&event),
-                _ => {}
-            }
-            // Then, match events that should always occur, whatever window is
-            // highlighted.
-            match event {
-                // If we click on "close" on the window itself.
-                Event::Window {
-                    window_id,
-                    win_event: sdl2::event::WindowEvent::Close,
-                    ..
-                } => match window_id {
-                    x if x == main_slide_id => break 'running,
-                    x if x == side_slide_id => slideshow_win.toggle_sideslide(),
-                    x if x == timer_id => timer_win.visibility_toggle(),
-                    _ => {}
-                },
-                // Quit event, QUIT (I guess F4, C-c) or Q or ESC
-                Event::Quit { .. }
-                | Event::KeyUp {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                }
-                | Event::KeyUp {
-                    keycode: Some(Keycode::Q),
-                    ..
-                } => break 'running,
-                // KeyUp: T
-                Event::KeyUp {
-                    keycode: Some(Keycode::T),
-                    ..
-                } => timer_win.visibility_toggle(),
-                // KeyUp: S
-                Event::KeyUp {
-                    keycode: Some(Keycode::S),
-                    ..
-                } => slideshow_win.toggle_sideslide(),
-                // Window Event: set the id of the window when focus is gained.
-                Event::Window {
-                    window_id,
-                    win_event: sdl2::event::WindowEvent::FocusGained,
-                    ..
-                }
-                | Event::MouseMotion { window_id, .. } => win_id = window_id,
-                _ => slideshow_win.is_changed = true,
-            }
+
+        if context.manage_events() {
+            break 'running;
         }
-
-        // Update slideshow window
-        if slideshow_win.is_changed {
-            slideshow_win.present_slide();
-            slideshow_win.is_changed = false;
-        }
-
-        // Update timer window
-        // timer_win.update_pseudo_random_position();
-        let (slide_idx, slide_len) = slideshow_win.get_slides_counters();
-        timer_win.update(slide_len, slide_idx + 1);
-
-        slideshow_win.main_win.canvas.present();
-        slideshow_win.side_win.canvas.present();
-        timer_win.generic_win.canvas.present();
+        context.update_internals();
+        context.render();
 
         match timer.elapsed() {
             Ok(elapsed) => {
