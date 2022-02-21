@@ -88,7 +88,8 @@ mod test {
     fn test_load_json() {
         let d = load_exists!("examples/slidy_serde/resources/input_file.json");
 
-        let f = File::open(&d).expect(&format!("File {:?} not found.", &d));
+        let f = File::open(&d)
+            .unwrap_or_else(|_| panic!("File {:?} not found.", &d));
         let reader = BufReader::new(f);
         let slideshow: Slideshow = serde_json::from_reader(reader)
             .map_err(|e| panic!("Unable to read the slides: {}", e))
@@ -126,7 +127,7 @@ center the text
 "#;
 
         let p = Path::new("");
-        let slides = parse_text(example, &p)
+        let slides = parse_text(example, p)
             .expect("should be able to create the slides.");
         assert_eq!(slides.slides.len(), 3);
     }
@@ -139,7 +140,7 @@ center the text
 "#;
 
         let p = Path::new("");
-        let slides = parse_text(example, &p)
+        let slides = parse_text(example, p)
             .expect("should be able to create the slides.");
 
         let text = slides.slides.get(0).and_then(|slide| {

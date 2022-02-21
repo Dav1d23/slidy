@@ -1,10 +1,3 @@
-// Import external references
-extern crate env_logger;
-#[macro_use]
-extern crate log;
-
-// Std imports.
-
 use std::fs::canonicalize;
 use std::path::Path;
 use std::str::FromStr;
@@ -13,16 +6,12 @@ use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 
-// Imports.
-
 use env_logger::{Builder, WriteStyle};
-use log::LevelFilter;
+use log::{error, info, warn, LevelFilter};
 use notify::{raw_watcher, RecursiveMode, Watcher};
 use structopt::StructOpt;
 
-// Local modules.
-
-use slidy::backend_sdl;
+use slidy::backends::sdl;
 
 #[derive(Debug, structopt::StructOpt)]
 /// My Amazing Personal Slideshow command line options.
@@ -74,7 +63,7 @@ fn main() {
             ),
         };
 
-    let screen_options = backend_sdl::WindowOptions {
+    let screen_options = sdl::WindowOptions {
         h,
         w,
         fullscreen: false,
@@ -153,7 +142,7 @@ fn main() {
     // since I want the slider to live on another thread.
 
     // Init backend and context.
-    let backend = backend_sdl::Backend::new();
+    let backend = sdl::Backend::new();
     let mut context = backend.get_context(screen_options);
 
     // Fix the max fps.

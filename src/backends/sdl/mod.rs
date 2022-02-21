@@ -16,7 +16,7 @@ pub fn get_default_font<'ttf>(
 ) -> sdl2::ttf::Font<'ttf, '_> {
     // TODO The font should be read from the slide directly
     //      and _then_ if nothing is provided use the default one.
-    let fontbytes = include_bytes!("../../assets/FreeMono.ttf");
+    let fontbytes = include_bytes!("../../../assets/FreeMono.ttf");
     let mut points = 100;
     loop {
         let rwfont = sdl2::rwops::RWops::from_bytes(fontbytes)
@@ -54,6 +54,17 @@ pub struct WindowOptions {
     pub fullscreen: bool,
 }
 
+impl Default for WindowOptions {
+    fn default() -> Self {
+        WindowOptions {
+            h: 800,
+            w: 600,
+            resizable: true,
+            fullscreen: false,
+        }
+    }
+}
+
 /// The backend. Stores all the SDL internals.
 /// This structure needs to created only once, and is used to get the live
 /// context.
@@ -89,7 +100,13 @@ impl Backend {
         }
     }
 
-    /// Get the context out of the backend.
+    /// Get the runnable context, using defaults screen options.
+    pub fn get_default_context(&self) -> Context {
+        let so = WindowOptions::default();
+        self.get_context(so)
+    }
+
+    /// Get the runnable context.
     pub fn get_context(&self, screen_options: WindowOptions) -> Context {
         // 1. The slideshow window
         let slideshow_win = SlideShowWindow::new(
