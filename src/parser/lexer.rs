@@ -1,5 +1,6 @@
 //! Get out the logic from a stream of tokens.
 
+use log::{debug, trace};
 use std::error::Error;
 use std::path::Path;
 

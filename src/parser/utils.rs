@@ -1,6 +1,8 @@
 use std::error::Error;
 use std::path::Path;
 
+use log::{debug, trace};
+
 use super::lexer::{CurrentState, Lexer};
 use super::tokenizer::{Structure, Token};
 

@@ -1,4 +1,5 @@
 //! Window used to show the slides.
+use log::error;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
