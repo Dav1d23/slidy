@@ -11,8 +11,6 @@ use log::{error, info, warn, LevelFilter};
 use notify::{raw_watcher, RecursiveMode, Watcher};
 use structopt::StructOpt;
 
-use slidy::backends::sdl;
-
 #[derive(Debug, structopt::StructOpt)]
 /// My Amazing Personal Slideshow command line options.
 struct Args {
@@ -22,13 +20,6 @@ struct Args {
     #[structopt(short = "l", long = "log-level", default_value = "INFO")]
     /// The log level to be used.
     log_level: String,
-    #[structopt(short = "w", long = "window-size", default_value = "800x600")]
-    /// Window size, expressed as <h>x<w>.
-    winsize: String,
-    #[structopt(long = "fixed-size")]
-    /// If set, the user can't resize the window, which will be stuck to window-size
-    /// Note: looks like "down-resizing" is always possible...
-    fixed_size: bool,
 }
 
 #[doc(hidden)]
@@ -46,29 +37,6 @@ fn main() {
         .init();
 
     info!("Using log level: {}", level);
-
-    // Parse the window size value.
-    let (h, w) = match args
-        .winsize
-        .split('x')
-        .map(|e| {
-            e.parse().unwrap_or_else(|_| {
-                panic!("Unable to parse `{}` into u32", e)
-            })
-        })
-        .collect::<Vec<u32>>().as_slice() {
-            [a, b] => (*a, *b),
-            _ => panic!(
-                "Must provide 2 parameters for the winsize, found more than that :)",
-            ),
-        };
-
-    let screen_options = sdl::WindowOptions {
-        h,
-        w,
-        fullscreen: false,
-        resizable: !args.fixed_size,
-    };
 
     let path = canonicalize(Path::new(&args.slide_path)).unwrap_or_else(|e| {
         panic!("`{}` is not a valid path: {}", &args.slide_path, e)
@@ -142,8 +110,9 @@ fn main() {
     // since I want the slider to live on another thread.
 
     // Init backend and context.
-    let backend = sdl::Backend::new();
-    let mut context = backend.get_context(screen_options);
+    let mut backend =
+        slidy::backends::get_backend(slidy::backends::AvailableBackends::Sdl);
+    let mut context = backend.get_context();
 
     // Fix the max fps.
     let fixed_fps = Duration::from_nanos(1_000_000_000 / 10);
@@ -153,13 +122,12 @@ fn main() {
         let timer = std::time::SystemTime::now();
         // Check if we have new slides
         if let Ok(slides) = send_slides_rx.try_recv() {
-            context.slideshow_win.set_slides(slides)
+            context.set_slides(slides)
         };
 
-        if context.manage_events() {
+        if context.manage_inputs() {
             break 'running;
         }
-        context.update_internals();
         context.render();
 
         match timer.elapsed() {
