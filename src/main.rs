@@ -110,8 +110,13 @@ fn main() {
     // since I want the slider to live on another thread.
 
     // Init backend and context.
+    #[cfg(feature="sdl")]
+    let backend = slidy::backends::AvailableBackends::Sdl;
+    #[cfg(not(feature="sdl"))]
+    let backend = slidy::backends::AvailableBackends::Crossterm;
+
     let mut backend =
-        slidy::backends::get_backend(slidy::backends::AvailableBackends::Sdl);
+        slidy::backends::get_backend(backend);
     let mut context = backend.get_context();
 
     // Fix the max fps.
