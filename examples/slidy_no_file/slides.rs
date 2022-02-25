@@ -3,7 +3,7 @@ use slidy::slideshow::{
     Slideshow,
 };
 
-pub fn prepare_slides(rot: f32, text: String, c1: u8, c2: u8) -> Slideshow {
+pub fn prepare_slide(rot: f32, text: String, c1: u8, c2: u8) -> Slideshow {
     Slideshow {
         slides: vec![{
             Slide {

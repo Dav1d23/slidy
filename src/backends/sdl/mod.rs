@@ -73,6 +73,13 @@ pub struct Backend {
     pub ttf_context: sdl2::ttf::Sdl2TtfContext,
 }
 
+impl super::SlidyBackend for Backend {
+    fn get_context(&mut self) -> Box<dyn super::SlidyContext + '_> {
+        let ctx = self.internal_get_context();
+        Box::new(ctx)
+    }
+}
+
 /// The context, which contains the live data.
 /// This structure has to be used to update the slides in the event loop, or
 /// manage keypresses, and so on.
@@ -100,14 +107,11 @@ impl Backend {
         }
     }
 
-    /// Get the runnable context, using defaults screen options.
-    pub fn get_default_context(&self) -> Context {
-        let so = WindowOptions::default();
-        self.get_context(so)
-    }
-
     /// Get the runnable context.
-    pub fn get_context(&self, screen_options: WindowOptions) -> Context {
+    /// @TODO manage windows options.
+    fn internal_get_context(&self) -> Context {
+        let screen_options = WindowOptions::default();
+
         // 1. The slideshow window
         let slideshow_win = SlideShowWindow::new(
             &self.sdl_context,
@@ -157,11 +161,13 @@ impl Default for Backend {
     }
 }
 
-type ShouldQuit = bool;
+impl<'b> super::SlidyContext for Context<'b> {
+    fn set_slides(&mut self, slides: crate::slideshow::Slideshow) {
+        self.slideshow_win.set_slides(slides);
+    }
 
-impl<'b> Context<'b> {
     /// Manage the incoming events.
-    pub fn manage_events(&mut self) -> ShouldQuit {
+    fn manage_inputs(&mut self) -> super::ShouldQuit {
         for event in self.event_pump.poll_iter() {
             match self.active_win_id {
                 x if x == self.main_slide_id => {
@@ -229,8 +235,8 @@ impl<'b> Context<'b> {
         false
     }
 
-    /// Update any internal parameter, before the rendering occur.
-    pub fn update_internals(&mut self) {
+    /// Render the windows.
+    fn render(&mut self) {
         // Update slideshow window
         if self.slideshow_win.is_changed {
             self.slideshow_win.present_slide();
@@ -241,10 +247,7 @@ impl<'b> Context<'b> {
         // self.timer_win.update_pseudo_random_position();
         let (slide_idx, slide_len) = self.slideshow_win.get_slides_counters();
         self.timer_win.update(slide_len, slide_idx + 1);
-    }
 
-    /// Render the windows.
-    pub fn render(&mut self) {
         self.slideshow_win.main_win.canvas.present();
         self.slideshow_win.side_win.canvas.present();
         self.timer_win.generic_win.canvas.present();

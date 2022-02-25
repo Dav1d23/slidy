@@ -5,6 +5,7 @@ use env_logger::{Builder, WriteStyle};
 use log::LevelFilter;
 
 use slidy::backends::sdl;
+use slidy::backends::SlidyBackend;
 
 mod slides;
 
@@ -20,11 +21,10 @@ fn main() {
         .init();
 
     // Init stuffs
-    let backend = sdl::Backend::new();
-    let mut context = backend.get_default_context();
+    let mut backend = sdl::Backend::new();
+    let mut context = backend.get_context();
 
     // Selected slide
-    let mut slide_counter = 0;
     let mut rotations = 0.0;
     let text = "Starting soon... ";
     let mut display_text = text.to_owned();
@@ -34,19 +34,14 @@ fn main() {
 
     // Event loop
     loop {
-        let slides = slides::prepare_slides(rotations, display_text, c1, c2);
-        context.slideshow_win.set_slides(slides);
+        let slides = slides::prepare_slide(rotations, display_text, c1, c2);
+        context.set_slides(slides);
 
-        if context.manage_events() {
+        if context.manage_inputs() {
             break;
         };
-        context.update_internals();
         context.render();
 
-        // Update the "mutable" slide :)
-        let (_slide_idx, slide_len) =
-            context.slideshow_win.get_slides_counters();
-        slide_counter = (slide_counter + 1) % slide_len;
         rotations = (rotations + 1.) % 360.0;
         text_counter = (text_counter + 1) % text.len();
         let (t1, t2) = text.split_at(text_counter);
