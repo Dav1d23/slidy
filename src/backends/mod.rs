@@ -1,4 +1,5 @@
 pub mod crossterm;
+#[cfg(feature="sdl")]
 pub mod sdl;
 
 use crate::slideshow::Slideshow;
@@ -22,6 +23,7 @@ pub trait SlidyContext {
 }
 
 pub enum AvailableBackends {
+    #[cfg(feature="sdl")]
     Sdl,
     Crossterm,
 }
@@ -29,6 +31,7 @@ pub enum AvailableBackends {
 pub fn get_backend(which: AvailableBackends) -> Box<dyn SlidyBackend> {
     use AvailableBackends::*;
     match which {
+        #[cfg(feature="sdl")]
         Sdl => Box::new(sdl::Backend::new()),
         _ => unimplemented!("Backend not implemented."),
     }
