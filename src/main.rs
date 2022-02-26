@@ -20,6 +20,9 @@ struct Args {
     #[structopt(short = "l", long = "log-level", default_value = "INFO")]
     /// The log level to be used.
     log_level: String,
+    #[structopt(short = "b", long = "backend")]
+    /// The log level to be used.
+    backend: Option<String>,
 }
 
 #[doc(hidden)]
@@ -109,14 +112,15 @@ fn main() {
     // It could also have been done with a reference to the slider, maybe, but this looks nicer
     // since I want the slider to live on another thread.
 
+    // @TODO change this based on the feature? Add a method in backend?
+    let preferred_backend = "sdl";
     // Init backend and context.
-    #[cfg(feature="sdl")]
-    let backend = slidy::backends::AvailableBackends::Sdl;
-    #[cfg(not(feature="sdl"))]
-    let backend = slidy::backends::AvailableBackends::Crossterm;
+    let backend: slidy::backends::AvailableBackends = match args.backend {
+        Some(v) => v.try_into().unwrap(),
+        None => preferred_backend.try_into().unwrap(),
+    };
 
-    let mut backend =
-        slidy::backends::get_backend(backend);
+    let mut backend = slidy::backends::get_backend(backend);
     let mut context = backend.get_context();
 
     // Fix the max fps.

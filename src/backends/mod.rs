@@ -1,3 +1,4 @@
+#[cfg(feature = "cterm")]
 pub mod crossterm;
 #[cfg(feature = "sdl")]
 pub mod sdl;
@@ -25,6 +26,7 @@ pub trait SlidyContext {
 pub enum AvailableBackends {
     #[cfg(feature = "sdl")]
     Sdl,
+    #[cfg(feature = "cterm")]
     Crossterm,
 }
 
@@ -32,8 +34,19 @@ fn match_try(value: &str) -> Result<AvailableBackends, String> {
     match value.to_lowercase().as_str() {
         #[cfg(feature = "sdl")]
         "sdl" => Ok(AvailableBackends::Sdl),
+        #[cfg(feature = "cterm")]
         "crossterm" => Ok(AvailableBackends::Crossterm),
         _ => Err(format!("{} backend is not supported.", value)),
+    }
+}
+
+pub fn get_backend(which: AvailableBackends) -> Box<dyn SlidyBackend> {
+    use AvailableBackends::*;
+    match which {
+        #[cfg(feature = "sdl")]
+        Sdl => Box::new(sdl::Backend::new()),
+        #[cfg(feature = "cterm")]
+        Crossterm => Box::new(crossterm::Backend::new()),
     }
 }
 
@@ -48,14 +61,5 @@ impl TryFrom<&str> for AvailableBackends {
     type Error = String;
     fn try_from(value: &str) -> Result<Self, String> {
         match_try(value)
-    }
-}
-
-pub fn get_backend(which: AvailableBackends) -> Box<dyn SlidyBackend> {
-    use AvailableBackends::*;
-    match which {
-        #[cfg(feature = "sdl")]
-        Sdl => Box::new(sdl::Backend::new()),
-        _ => unimplemented!("Backend not implemented."),
     }
 }
