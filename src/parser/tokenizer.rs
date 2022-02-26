@@ -12,7 +12,7 @@ One can escape tokens by using \ in front of a token (like \\:ge).
 Check the module's tests for more details.
 
 */
-use log::error;
+use tracing::error;
 
 #[derive(Debug, PartialEq)]
 pub(super) struct TokenSpan {
