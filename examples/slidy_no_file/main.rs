@@ -1,9 +1,6 @@
 use std::thread::sleep;
 use std::time::Duration;
 
-use env_logger::{Builder, WriteStyle};
-use log::LevelFilter;
-
 use slidy::backends::sdl;
 use slidy::backends::SlidyBackend;
 
@@ -11,15 +8,6 @@ mod slides;
 
 #[doc(hidden)]
 fn main() {
-    let level = LevelFilter::Info;
-
-    // Init logger.
-    let mut log_builder = Builder::new();
-    log_builder
-        .filter_level(level)
-        .write_style(WriteStyle::Always)
-        .init();
-
     // Init stuffs
     let mut backend = sdl::Backend::new();
     let mut context = backend.get_context();

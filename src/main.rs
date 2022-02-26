@@ -6,10 +6,9 @@ use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 
-use env_logger::{Builder, WriteStyle};
-use log::{error, info, warn, LevelFilter};
 use notify::{raw_watcher, RecursiveMode, Watcher};
 use structopt::StructOpt;
+use tracing::{error, info, level_filters, warn};
 
 #[derive(Debug, structopt::StructOpt)]
 /// My Amazing Personal Slideshow command line options.
@@ -29,17 +28,16 @@ struct Args {
 fn main() {
     let args = Args::from_args();
 
-    let level = LevelFilter::from_str(&args.log_level)
+    let filter = level_filters::LevelFilter::from_str(&args.log_level)
         .expect("Please provide a valid log level.");
 
     // Init logger.
-    let mut log_builder = Builder::new();
-    log_builder
-        .filter(None, level)
-        .write_style(WriteStyle::Always)
+    let file_appender = tracing_appender::rolling::hourly("/tmp/", "slidy.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    tracing_subscriber::fmt()
+        .with_max_level(filter)
+        .with_writer(non_blocking)
         .init();
-
-    info!("Using log level: {}", level);
 
     let path = canonicalize(Path::new(&args.slide_path)).unwrap_or_else(|e| {
         panic!("`{}` is not a valid path: {}", &args.slide_path, e)
