@@ -1,5 +1,5 @@
 pub mod crossterm;
-#[cfg(feature="sdl")]
+#[cfg(feature = "sdl")]
 pub mod sdl;
 
 use crate::slideshow::Slideshow;
@@ -23,15 +23,38 @@ pub trait SlidyContext {
 }
 
 pub enum AvailableBackends {
-    #[cfg(feature="sdl")]
+    #[cfg(feature = "sdl")]
     Sdl,
     Crossterm,
+}
+
+fn match_try(value: &str) -> Result<AvailableBackends, String> {
+    match value.to_lowercase().as_str() {
+        #[cfg(feature = "sdl")]
+        "sdl" => Ok(AvailableBackends::Sdl),
+        "crossterm" => Ok(AvailableBackends::Crossterm),
+        _ => Err(format!("{} backend is not supported.", value)),
+    }
+}
+
+impl TryFrom<String> for AvailableBackends {
+    type Error = String;
+    fn try_from(value: String) -> Result<Self, String> {
+        match_try(value.as_str())
+    }
+}
+
+impl TryFrom<&str> for AvailableBackends {
+    type Error = String;
+    fn try_from(value: &str) -> Result<Self, String> {
+        match_try(value)
+    }
 }
 
 pub fn get_backend(which: AvailableBackends) -> Box<dyn SlidyBackend> {
     use AvailableBackends::*;
     match which {
-        #[cfg(feature="sdl")]
+        #[cfg(feature = "sdl")]
         Sdl => Box::new(sdl::Backend::new()),
         _ => unimplemented!("Backend not implemented."),
     }
