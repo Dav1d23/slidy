@@ -25,21 +25,25 @@ impl Backend {
     /// Create a new backend.
     pub fn new() -> Backend {
         debug!("Enable raw-mode.");
-        terminal::enable_raw_mode().unwrap();
+        terminal::enable_raw_mode()
+            .expect("Raw mode is needed for input management.");
         Backend {}
     }
 
     /// Get the runnable context.
     fn internal_get_context(&self) -> Context {
         let mut stdout = stdout();
-        stdout.queue(cursor::Hide).unwrap();
-        stdout.flush().unwrap();
+        stdout
+            .queue(cursor::Hide)
+            .expect("Unable to hide the cursor?");
+        stdout.flush().expect("Unable to flush?");
 
         Context {
             slide_id: 0,
             slides: Slideshow::default(),
             _lifetime: PhantomData,
             stdout,
+            slides_changed: true,
         }
     }
 }
@@ -67,11 +71,13 @@ pub struct Context<'backend> {
     slides: Slideshow,
     _lifetime: PhantomData<&'backend ()>,
     stdout: Stdout,
+    slides_changed: bool,
 }
 
 impl<'b> super::SlidyContext for Context<'b> {
     fn set_slides(&mut self, slides: crate::slideshow::Slideshow) {
         self.slides = slides;
+        self.slides_changed = true;
     }
 
     /// Manage the incoming events.
@@ -80,6 +86,9 @@ impl<'b> super::SlidyContext for Context<'b> {
             let evt = read().expect("Poll told us this should work.");
             trace!("{:#?}", evt);
             match evt {
+                Event::Resize(..) => {
+                    self.slides_changed = true;
+                }
                 Event::Key(KeyEvent {
                     code: KeyCode::Char('q'),
                     ..
@@ -89,7 +98,8 @@ impl<'b> super::SlidyContext for Context<'b> {
                     ..
                 }) => {
                     self.slide_id =
-                        (self.slide_id + 1).min(self.slides.slides.len() - 1)
+                        (self.slide_id + 1).min(self.slides.slides.len() - 1);
+                    self.slides_changed = true;
                 }
                 Event::Key(KeyEvent {
                     code: KeyCode::Char('p'),
@@ -99,7 +109,8 @@ impl<'b> super::SlidyContext for Context<'b> {
                         self.slide_id - 1
                     } else {
                         0
-                    }
+                    };
+                    self.slides_changed = true;
                 }
                 _ => {}
             }
@@ -109,29 +120,46 @@ impl<'b> super::SlidyContext for Context<'b> {
 
     /// Render the windows.
     fn render(&mut self) {
-        trace!("Rendering phase");
-        self.clear_all();
-        let term_size = terminal::size().unwrap();
-        debug!("Considering slide {}", self.slide_id);
-
-        if let Some(slide) = self.slides.slides.get(self.slide_id) {
-            for sec in slide.sections.iter() {
-                // @TODO why is position 0. 0. if it is not there?
-                let pos =
-                    sec.position.as_ref().unwrap_or(&Position { x: 0., y: 0. });
-                let x: u16 = (term_size.0 as f32 * pos.x).ceil() as u16;
-                let y: u16 = (term_size.1 as f32 * pos.y).ceil() as u16;
-                if let Some(SectionMain::Text(sec_text)) = &sec.sec_main {
-                    self.stdout.queue(cursor::MoveTo(x, y)).unwrap();
-                    // I should use the "style" defined in the slides instead of this one.
-                    let styled = sec_text.text.as_str().with(Color::White);
-                    self.stdout.queue(PrintStyledContent(styled)).unwrap();
+        if self.slides_changed {
+            trace!("Rendering phase");
+            self.clear_all();
+            let term_size = match terminal::size() {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("Unable to get the terminal size, using a default one: {}", e);
+                    (30, 20)
                 }
+            };
+            debug!("Considering slide {}", self.slide_id);
+
+            if let Some(slide) = self.slides.slides.get(self.slide_id) {
+                for sec in slide.sections.iter() {
+                    // @TODO why is position 0. 0. if it is not there?
+                    let pos = sec
+                        .position
+                        .as_ref()
+                        .unwrap_or(&Position { x: 0.01, y: 0.01 });
+                    let x: u16 = (term_size.0 as f32 * pos.x).ceil() as u16;
+                    let mut y: u16 = (term_size.1 as f32 * pos.y).ceil() as u16;
+                    if let Some(SectionMain::Text(sec_text)) = &sec.sec_main {
+                        for chunk in sec_text.text.as_str().split('\n') {
+                            debug!("Writing {chunk} to [{x}, {y}]");
+                            self.stdout.queue(cursor::MoveTo(x, y)).expect("Unable to move the cursor?");
+                            // I should use the "style" defined in the slides instead of this one.
+                            let styled = chunk.with(Color::White);
+                            self.stdout
+                                .queue(PrintStyledContent(styled))
+                                .expect("Unable to write on the terminal?");
+                            y += 1;
+                        }
+                    }
+                }
+            } else {
+                warn!("There are no slides to show!");
             }
-        } else {
-            warn!("There are no slides to show!");
+            self.flush();
         }
-        self.flush();
+        self.slides_changed = false;
     }
 }
 
@@ -139,17 +167,17 @@ impl Context<'_> {
     fn clear_all(&mut self) {
         self.stdout
             .queue(terminal::Clear(terminal::ClearType::All))
-            .unwrap();
+            .expect("Unable to clear the screen?");
     }
 
     fn flush(&mut self) {
-        self.stdout.flush().unwrap();
+        self.stdout.flush().expect("Unable to flush?");
     }
 }
 
 impl Drop for Context<'_> {
     fn drop(&mut self) {
-        self.stdout.queue(cursor::Show).unwrap();
+        self.stdout.queue(cursor::Show).expect("Unable to show the cursor back?");
         self.flush();
     }
 }
