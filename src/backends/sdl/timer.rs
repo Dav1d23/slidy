@@ -14,6 +14,7 @@ enum Status {
     Running(SystemTime),
 }
 
+/// The Timer window.
 pub struct Window<'a> {
     /// Contains the generic information for a window
     pub generic_win: GenericWindow,
@@ -28,6 +29,7 @@ pub struct Window<'a> {
 
 impl<'a> Window<'a> {
     #[must_use]
+    /// Create a new Timer window.
     pub fn new(
         context: &sdl2::Sdl,
         font: sdl2::ttf::Font<'a, 'a>,

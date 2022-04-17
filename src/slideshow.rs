@@ -1,10 +1,8 @@
-//! The slideshow definition.
-
 use std::collections::HashMap;
 
-/// A 2-D vector.
-/// Note that this contains float, since we are in "coordinates relative to
-/// the screen space" like (more or less)
+/// The position data.
+/// Note that this contains float between 0 and 1, and our coordinates are
+/// relative to the window.
 /// ```text
 /// (0,0)-----------------(1,0)
 ///   |                     |
@@ -17,24 +15,33 @@ use std::collections::HashMap;
 /// ```
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct Position {
+    /// The `x` coordinate.
     pub x: f32,
+    /// The `y` coordinate.
     pub y: f32,
 }
 
-/// The size of some objects to be represented.
+/// The size of the object to be represented.
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct Size {
+    /// The `width`.
     pub w: f32,
+    /// The `height`.
     pub h: f32,
 }
 
 #[derive(
     serde::Serialize, serde::Deserialize, Debug, Copy, Clone, PartialEq,
 )]
+/// A color, represented as rgb + alpha.
 pub struct Color {
+    /// Red
     pub r: u8,
+    /// Green
     pub g: u8,
+    /// Blue
     pub b: u8,
+    /// Alpha
     pub a: u8,
 }
 
@@ -49,14 +56,15 @@ impl From<(u8, u8, u8, u8)> for Color {
     }
 }
 
-/// How a text section should looks like.
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+/// Define a section that contains a text.
 pub struct SectionText {
     /// The text that should be rendered
     pub text: String,
     /// The color of the text
     pub color: Option<Color>,
     // The font name, must be aligned with the global one in the Slide struct
+    /// Unused at the moment
     pub font: Option<String>,
 }
 
@@ -70,10 +78,12 @@ impl Default for SectionText {
     }
 }
 
-/// How a figure section should looks like.
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+/// Define a section that contains a figure.
 pub struct SectionFigure {
+    /// Path to the actual figure's location on disk
     pub path: String,
+    /// The rotation, in degrees
     pub rotation: f32,
 }
 
@@ -90,9 +100,9 @@ impl Default for SectionFigure {
 /// The main entry in each section.
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub enum SectionMain {
-    // A figure
+    /// The variant that represents a picture.
     Figure(SectionFigure),
-    // A text section
+    /// The variant that represents a text chunk.
     Text(SectionText),
 }
 
@@ -101,8 +111,11 @@ pub enum SectionMain {
 /// and so on and so forth.
 #[derive(serde::Serialize, serde::Deserialize, Debug, Default, PartialEq)]
 pub struct Section {
+    /// The size of the section.
     pub size: Option<Size>,
+    /// The position of the section in the slide.
     pub position: Option<Position>,
+    /// The specific section.
     pub sec_main: Option<SectionMain>,
 }
 
@@ -111,12 +124,15 @@ pub struct Section {
 /// Each section contains either text, or an image, or both.
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
 pub struct Slide {
+    /// The default backgound color.
     pub bg_color: Option<Color>,
+    /// The list of sections in the single slide.
     pub sections: Vec<Section>,
 }
 
 impl Slide {
     #[must_use]
+    /// Create an empty Slide object.
     pub const fn default() -> Self {
         let sections = vec![];
         let bg_color = None;
@@ -125,14 +141,17 @@ impl Slide {
 }
 
 /// The whole slideshow we have to render.
-/// Note that some information might not be useful in case we would
-/// implement different back-ends, but this is not a problem now.
+///
+/// Note that not all the information are used by all the backends. But since
+/// we have a single parser and multiple backends, it is what it is.
 #[derive(serde::Serialize, serde::Deserialize, Debug, Default)]
 pub struct Slideshow {
     /// The slides to be shown.
     pub slides: Vec<Slide>,
     /// The hashmap containing the association between the
     /// font names and their path.
+    ///
+    /// Unused at the moment, as there is only a single font available for SDL.
     pub fonts: HashMap<String, String>,
     /// The default background color.
     pub bg_col: Option<Color>,

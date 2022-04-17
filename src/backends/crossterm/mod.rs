@@ -1,4 +1,4 @@
-//! The provided SDL2 backend.
+//! The provided Crossterm backend.
 use crate::slideshow::{Position, SectionMain, Slideshow};
 use crossterm::{
     cursor,

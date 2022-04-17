@@ -1,6 +1,6 @@
-pub mod lexer;
-pub mod tokenizer;
-pub mod utils;
+pub(crate) mod lexer;
+pub(crate) mod tokenizer;
+mod utils;
 
 use std::error::Error;
 use std::fs::File;
@@ -10,8 +10,11 @@ use std::path::Path;
 
 use crate::slideshow::Slideshow;
 
-/// Create the slides.
-fn parse_text(
+/// Parse the input text, and return the slides as a result.
+///
+/// These slides can be drawn using the appropriate [backend](crate::backends).
+/// `base_folder` is the folder used to resolve relative paths in the input data.
+pub fn parse_text(
     inp: &str,
     base_folder: &Path,
 ) -> Result<Slideshow, Box<dyn Error + 'static>> {
@@ -25,7 +28,9 @@ fn parse_text(
     Ok(slideshow)
 }
 
-/// Parse the file, and return the slides as a result.
+/// Parse the input file, and return the slides as a result.
+///
+/// These slides can be drawn using the appropriate [backend](crate::backends).
 pub fn parse_file(
     path: &std::path::Path,
 ) -> Result<Slideshow, Box<dyn Error + 'static>> {
@@ -40,8 +45,8 @@ pub fn parse_file(
     // Read the whole file to a String.
     let mut file_to_string = String::new();
     reader.read_to_string(&mut file_to_string)?;
-    let slides = parse_text(file_to_string.as_str(), base_folder)?;
-    Ok(slides)
+    let slideshow = parse_text(file_to_string.as_str(), base_folder)?;
+    Ok(slideshow)
 }
 
 #[cfg(test)]

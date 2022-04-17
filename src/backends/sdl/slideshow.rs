@@ -12,6 +12,7 @@ use crate::slideshow;
 pub struct Window<'a> {
     /// Contains the generic information for a window
     pub main_win: GenericWindow,
+    /// Contains the information of the sidewindow
     pub side_win: GenericWindow,
     /// The actual slide being shown.
     idx: usize,
@@ -19,7 +20,7 @@ pub struct Window<'a> {
     pub is_changed: bool,
     /// All the slides in the slideshow.
     slides: slideshow::Slideshow,
-    // If the side slideshow should be visible.
+    /// If the side slideshow should be visible.
     pub side_win_is_visible: bool,
     // Internal structure to hold the textures in order not to load them over
     // and over.
@@ -29,6 +30,7 @@ pub struct Window<'a> {
 
 impl<'a> Window<'a> {
     #[must_use]
+    /// Create a new SDL2 window.
     pub fn new(
         context: &sdl2::Sdl,
         font: sdl2::ttf::Font<'a, 'a>,
@@ -71,21 +73,13 @@ impl<'a> Window<'a> {
     }
 
     #[must_use]
+    /// Get the slide we're currently reading, and the amount of available
+    /// slides.
     pub fn get_slides_counters(&self) -> (usize, usize) {
         (self.idx, self.slides.slides.len())
     }
 
-    pub fn set_slide(&mut self, idx: usize) {
-        assert!(
-            self.idx < self.slides.slides.len(),
-            "Can't set slide {}/{}",
-            idx,
-            self.slides.slides.len()
-        );
-        self.idx = idx;
-        self.is_changed = true;
-    }
-
+    /// Show the next slide.
     pub fn next_slide(&mut self) {
         if self.idx < self.slides.slides.len() - 1 {
             self.idx += 1;
@@ -93,6 +87,7 @@ impl<'a> Window<'a> {
         }
     }
 
+    /// Show the previous slide.
     pub fn prev_slide(&mut self) {
         if self.idx > 0 {
             self.idx -= 1;
