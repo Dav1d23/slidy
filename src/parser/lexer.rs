@@ -23,12 +23,12 @@ pub(super) enum CurrentState {
 }
 
 impl Default for CurrentState {
-    fn default() -> CurrentState {
-        CurrentState::None
+    fn default() -> Self {
+        Self::None
     }
 }
 
-/// The internals of the TextParser.
+/// The internals of the `TextParser`.
 #[derive(Debug, Default)]
 pub(super) struct LexerInternal {
     /// In which section were we?
@@ -51,7 +51,7 @@ impl<'a> Lexer<'a> {
     pub(super) fn new(base_folder: &'a Path) -> Lexer {
         Lexer {
             base_folder: Some(base_folder),
-            ..Default::default()
+            ..Lexer::default()
         }
     }
 
@@ -97,7 +97,7 @@ impl<'a> Lexer<'a> {
                 Structure::Import => {
                     utils::manage_import(self, rem, base_folder)
                 }
-                Structure::Slide => utils::manage_slide(self, rem),
+                Structure::Slide => Ok(utils::manage_slide(self, rem)),
                 Structure::TextLine(el) => {
                     utils::manage_textline(self, el, rem, base_folder)
                 }
@@ -132,8 +132,8 @@ mod test {
     use crate::parser::tokenizer::TokenSpan;
 
     use super::*;
-    use crate::slideshow::*;
-    use Structure::*;
+    use crate::slideshow::{Color, Section, SectionMain, SectionText};
+    use Structure::{Figure, Fontcolor, Import, Slide, String, TextBuffer};
 
     fn resources_path() -> PathBuf {
         let mut base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

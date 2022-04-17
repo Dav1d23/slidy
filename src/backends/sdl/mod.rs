@@ -1,6 +1,8 @@
 //! The provided SDL2 backend.
 
-use self::{slideshow::SlideShowWindow, timer::TimerWindow};
+use self::{
+    slideshow::Window as SlideShowWindow, timer::Window as TimerWindow,
+};
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -9,8 +11,9 @@ pub mod slideshow;
 pub mod timer;
 pub mod utils;
 
-/// Get the default, included font. It is the FreeMono one, and it is included
-/// in the binary, so no need to provide any other file.
+/// Get the default, included font. It is the `FreeMono` one, and it is
+/// included in the binary, so no need to provide any other file.
+#[must_use]
 pub fn get_default_font<'ttf>(
     context: &'ttf sdl2::ttf::Sdl2TtfContext,
 ) -> sdl2::ttf::Font<'ttf, '_> {
@@ -25,13 +28,12 @@ pub fn get_default_font<'ttf>(
             return font;
         }
         points -= 10;
-        if points < 10 {
-            panic!("This is not enough to show the font...");
-        }
+        assert!(points >= 10, "This is not enough to show the font...");
     }
 }
 
 /// Helper: init the SDL context.
+#[must_use]
 pub fn get_sdl_context() -> sdl2::Sdl {
     // Init stuffs.
     let sdl_context = sdl2::init().expect("Unable to init sdl.");
@@ -56,7 +58,7 @@ pub struct WindowOptions {
 
 impl Default for WindowOptions {
     fn default() -> Self {
-        WindowOptions {
+        Self {
             h: 800,
             w: 600,
             resizable: true,
@@ -97,11 +99,12 @@ pub struct Context<'backend> {
 
 impl Backend {
     /// Create a new backend.
-    pub fn new() -> Backend {
+    #[must_use]
+    pub fn new() -> Self {
         let sdl_context = get_sdl_context();
         let ttf_context = get_ttf_context();
 
-        Backend {
+        Self {
             sdl_context,
             ttf_context,
         }
@@ -171,13 +174,13 @@ impl<'b> super::SlidyContext for Context<'b> {
         for event in self.event_pump.poll_iter() {
             match self.active_win_id {
                 x if x == self.main_slide_id => {
-                    self.slideshow_win.manage_keypress(&event)
+                    self.slideshow_win.manage_keypress(&event);
                 }
                 x if x == self.side_slide_id => {
-                    self.slideshow_win.manage_keypress(&event)
+                    self.slideshow_win.manage_keypress(&event);
                 }
                 x if x == self.timer_id => {
-                    self.timer_win.manage_keypress(&event)
+                    self.timer_win.manage_keypress(&event);
                 }
                 _ => {}
             }
@@ -192,21 +195,17 @@ impl<'b> super::SlidyContext for Context<'b> {
                 } => match window_id {
                     x if x == self.main_slide_id => return true,
                     x if x == self.side_slide_id => {
-                        self.slideshow_win.toggle_sideslide()
+                        self.slideshow_win.toggle_sideslide();
                     }
                     x if x == self.timer_id => {
-                        self.timer_win.visibility_toggle()
+                        self.timer_win.visibility_toggle();
                     }
                     _ => {}
                 },
                 // Quit event, QUIT (I guess F4, C-c) or Q or ESC
                 Event::Quit { .. }
                 | Event::KeyUp {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                }
-                | Event::KeyUp {
-                    keycode: Some(Keycode::Q),
+                    keycode: Some(Keycode::Escape | Keycode::Q),
                     ..
                 } => return true,
                 // KeyUp: T

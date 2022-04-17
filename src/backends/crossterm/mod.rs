@@ -22,16 +22,18 @@ impl super::SlidyBackend for Backend {
 }
 
 impl Backend {
+    #[must_use]
     /// Create a new backend.
-    pub fn new() -> Backend {
+    pub fn new() -> Self {
         debug!("Enable raw-mode.");
         terminal::enable_raw_mode()
             .expect("Raw mode is needed for input management.");
-        Backend {}
+        Self {}
     }
 
     /// Get the runnable context.
     fn internal_get_context(&self) -> Context {
+        let _ = self;
         let mut stdout = stdout();
         stdout
             .queue(cursor::Hide)
@@ -133,18 +135,30 @@ impl<'b> super::SlidyContext for Context<'b> {
             debug!("Considering slide {}", self.slide_id);
 
             if let Some(slide) = self.slides.slides.get(self.slide_id) {
-                for sec in slide.sections.iter() {
+                for sec in &slide.sections {
                     // @TODO why is position 0. 0. if it is not there?
                     let pos = sec
                         .position
                         .as_ref()
                         .unwrap_or(&Position { x: 0.01, y: 0.01 });
-                    let x: u16 = (term_size.0 as f32 * pos.x).ceil() as u16;
-                    let mut y: u16 = (term_size.1 as f32 * pos.y).ceil() as u16;
+                    let x = (f32::from(term_size.0) * pos.x).ceil();
+                    assert!(0.0 <= x && x <= u16::MAX.into());
+
+                    #[allow(clippy::cast_possible_truncation)]
+                    #[allow(clippy::cast_sign_loss)]
+                    let x: u16 = x as u16;
+                    let y = (f32::from(term_size.1) * pos.y).ceil();
+                    assert!(0.0 <= y && y <= u16::MAX.into());
+
+                    #[allow(clippy::cast_possible_truncation)]
+                    #[allow(clippy::cast_sign_loss)]
+                    let mut y: u16 = y as u16;
                     if let Some(SectionMain::Text(sec_text)) = &sec.sec_main {
                         for chunk in sec_text.text.as_str().split('\n') {
                             debug!("Writing {chunk} to [{x}, {y}]");
-                            self.stdout.queue(cursor::MoveTo(x, y)).expect("Unable to move the cursor?");
+                            self.stdout
+                                .queue(cursor::MoveTo(x, y))
+                                .expect("Unable to move the cursor?");
                             // I should use the "style" defined in the slides instead of this one.
                             let styled = chunk.with(Color::White);
                             self.stdout
@@ -177,7 +191,9 @@ impl Context<'_> {
 
 impl Drop for Context<'_> {
     fn drop(&mut self) {
-        self.stdout.queue(cursor::Show).expect("Unable to show the cursor back?");
+        self.stdout
+            .queue(cursor::Show)
+            .expect("Unable to show the cursor back?");
         self.flush();
     }
 }

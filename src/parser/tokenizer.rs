@@ -22,8 +22,8 @@ pub(super) struct TokenSpan {
 }
 
 impl TokenSpan {
-    pub(super) fn new(line: usize, beg: usize, end: usize) -> TokenSpan {
-        TokenSpan { line, beg, end }
+    pub(super) const fn new(line: usize, beg: usize, end: usize) -> Self {
+        Self { line, beg, end }
     }
 }
 
@@ -59,13 +59,17 @@ pub(super) struct Token<'a> {
 }
 
 impl<'a> Token<'a> {
-    pub(super) fn new(symbol: Structure<'a>, span: TokenSpan) -> Token {
+    pub(super) const fn new(symbol: Structure<'a>, span: TokenSpan) -> Token {
         Token { symbol, span }
     }
 }
 
 fn build_token(val: &str, linenum: usize, beg: usize, end: usize) -> Token {
-    use Structure::*;
+    use Structure::{
+        BackGroundColor, Figure, Fontcolor, Generic, Import, Number, Position,
+        Rotation, Size, Slide, String, TextBuffer,
+    };
+
     let structure = match val {
         ":ge" => Generic,
         ":fc" => Fontcolor,
@@ -92,7 +96,7 @@ fn build_token(val: &str, linenum: usize, beg: usize, end: usize) -> Token {
     }
 }
 
-/// Parse the line, knowing that we surely don't have TextLine and Comments here.
+/// Parse the line, knowing that we surely don't have `TextLine` and Comments here.
 fn parse_single_tokens<'a>(
     tokens: &mut Vec<Token<'a>>,
     line: &'a str,
@@ -109,6 +113,10 @@ fn parse_single_tokens<'a>(
     let mut last_whitespace = -1_isize;
     let mut whitespace_mode = false;
     for (pos, ch) in line.chars().enumerate() {
+        assert!((last_whitespace + 1) >= 0);
+        #[allow(clippy::cast_sign_loss)]
+        let last_whitespace_usize = (last_whitespace + 1) as usize;
+
         if ch.is_whitespace() {
             if pos == 0 {
                 whitespace_mode = true;
@@ -116,42 +124,42 @@ fn parse_single_tokens<'a>(
             if !whitespace_mode {
                 // This whitespace comes after "something".
                 let elem = line
-                    .get((last_whitespace + 1) as usize..pos)
+                    .get(last_whitespace_usize..pos)
                     .expect("Pos is past the end of the slice.");
                 if !elem.is_empty() {
-                    let tk = build_token(
-                        elem,
-                        linenum,
-                        (last_whitespace + 1) as usize,
-                        pos,
-                    );
+                    let tk =
+                        build_token(elem, linenum, last_whitespace_usize, pos);
                     tokens.push(tk);
                 }
 
                 whitespace_mode = true;
             }
-            last_whitespace = pos as isize;
+
+            assert!(pos < isize::MAX as usize);
+            #[allow(clippy::cast_possible_wrap)]
+            let pos = pos as isize;
+
+            last_whitespace = pos;
         } else {
             // Not whitespace anymore: advance until the end of the line or a whitespace.
             whitespace_mode = false;
         }
     }
+    assert!((last_whitespace + 1) >= 0);
+    #[allow(clippy::cast_sign_loss)]
+    let last_whitespace_usize = (last_whitespace + 1) as usize;
+
     if !whitespace_mode {
         // The last char was not a whitespace, so it has to be considered.
         let elem = line
-            .get((last_whitespace + 1) as usize..)
+            .get(last_whitespace_usize..)
             .expect("last_whitespace is out of the array");
-        let tk = build_token(
-            elem,
-            linenum,
-            (last_whitespace + 1) as usize,
-            line.len(),
-        );
+        let tk = build_token(elem, linenum, last_whitespace_usize, line.len());
         tokens.push(tk);
     }
 }
 
-/// Parse a line, and detect all the TextLine and Comments that are there.
+/// Parse a line, and detect all the `TextLine` and Comments that are there.
 fn parse_line<'a>(tokens: &mut Vec<Token<'a>>, line: &'a str, linenum: usize) {
     // Find the position of columns.
     let mut found_token = false;
@@ -180,19 +188,19 @@ fn parse_line<'a>(tokens: &mut Vec<Token<'a>>, line: &'a str, linenum: usize) {
             break;
         }
     }
-    if !found_token {
+    if found_token {
+        // There is a token, so we must build the tokens and add them.
+        parse_single_tokens(tokens, line, linenum);
+    } else {
         let tok = Token::new(
-            if !line.starts_with('#') {
-                Structure::TextLine(line)
-            } else {
+            if line.starts_with('#') {
                 Structure::Comment(line)
+            } else {
+                Structure::TextLine(line)
             },
             TokenSpan::new(linenum, 0, line.len()),
         );
         tokens.push(tok);
-    } else {
-        // There is a token, so we must build the tokens and add them.
-        parse_single_tokens(tokens, line, linenum);
     }
 }
 
@@ -207,7 +215,10 @@ pub(super) fn tokenizer(inp: &str) -> Vec<Token> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use Structure::*;
+    use Structure::{
+        Comment, Fontcolor, Generic, Number, Position, Size, Slide, String,
+        TextBuffer, TextLine,
+    };
 
     #[test]
     fn test_single_token() {
@@ -355,6 +366,7 @@ mod test {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn test_gettokens() {
         let inp = r#":ge 1 2 :ps 1 
 # a comment!

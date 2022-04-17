@@ -54,10 +54,7 @@ pub(super) fn manage_import(
     Ok(1)
 }
 
-pub(super) fn manage_slide(
-    lexer: &mut Lexer,
-    _tokens: &[Token],
-) -> Result<usize, Box<dyn Error + 'static>> {
+pub(super) fn manage_slide(lexer: &mut Lexer, _tokens: &[Token]) -> usize {
     match &mut lexer.internals.slide {
         None => lexer.internals.slide = Some(Slide::default()),
         Some(s) => {
@@ -67,7 +64,7 @@ pub(super) fn manage_slide(
         }
     }
     lexer.internals.state = CurrentState::Slide;
-    Ok(0)
+    0
 }
 
 pub(super) fn manage_textline(
@@ -76,7 +73,8 @@ pub(super) fn manage_textline(
     _tokens: &[Token],
     _base_folder: &Path,
 ) -> Result<usize, Box<dyn Error + 'static>> {
-    use CurrentState::*;
+    use CurrentState::{Figure, General, Import, None, Slide, Text};
+
     match lexer.internals.state {
         Import | Figure | Slide | General | None => {
             if el.is_empty() {
@@ -89,19 +87,14 @@ pub(super) fn manage_textline(
             apply_slide(&mut lexer.internals.slide, |slide| {
                 let last_section = slide.sections.len() - 1;
 
-                if let Some(ref mut sec_main) =
-                    slide.sections[last_section].sec_main
-                {
-                    if let SectionMain::Text(ref mut text) = sec_main {
+                slide.sections[last_section].sec_main.as_mut().map_or_else(
+                    || Err("No section is built yet.".into()),
+                    |sec_main| if let SectionMain::Text(ref mut text) = sec_main {
                         text.text.push_str(&el.replace("\\:", ":"));
                         text.text.push('\n');
                         Ok(())
                     } else {
-                        Err("In a Text section but the last section is not a figure... How?".into())
-                    }
-                } else {
-                    Err("No section is built yet.".into())
-                }
+                        Err("In a Text section but the last section is not a figure... How?".into())})
             })?;
             Ok(0)
         }
@@ -116,7 +109,7 @@ pub(super) fn manage_textbuffer(
     apply_slide(&mut lexer.internals.slide, |slide| {
         let text_sec = Section {
             sec_main: Some(SectionMain::Text(SectionText::default())),
-            ..Default::default()
+            ..Section::default()
         };
         slide.sections.push(text_sec);
         Ok(())
@@ -154,9 +147,9 @@ pub(super) fn manage_figure(
         let figure_sec = Section {
             sec_main: Some(SectionMain::Figure(SectionFigure {
                 path: figure_path.clone(),
-                ..Default::default()
+                ..SectionFigure::default()
             })),
-            ..Default::default()
+            ..Section::default()
         };
         slide.sections.push(figure_sec);
         Ok(())
@@ -169,7 +162,8 @@ pub(super) fn manage_position(
     lexer: &mut Lexer,
     tokens: &[Token],
 ) -> Result<usize, Box<dyn Error + 'static>> {
-    use CurrentState::*;
+    use CurrentState::{Figure, General, Import, None, Slide, Text};
+
     match lexer.internals.state {
         Import | Slide | General | None => {
             Err("Position does make sense only for text and figures.".into())
@@ -253,7 +247,8 @@ pub(super) fn manage_size(
     lexer: &mut Lexer,
     tokens: &[Token],
 ) -> Result<usize, Box<dyn Error + 'static>> {
-    use CurrentState::*;
+    use CurrentState::{Figure, General, Import, None, Slide, Text};
+
     match lexer.internals.state {
         Import | Slide | None => Err(
             "Size does make sense only in general, text and figure sections."
@@ -286,11 +281,13 @@ fn extract_f32(t: &Token) -> Result<f32, Box<dyn Error + 'static>> {
 
 fn extract_u8(t: &Token) -> Result<u8, Box<dyn Error + 'static>> {
     let v = extract_f32(t)?;
-    if v.ceil() == v.floor() {
+    if (v.ceil() - v.floor()).abs() < 0.01 {
         // Ceil is the same as floor, so we can assume the value to be an int.
         let v = v.floor();
         if (0.0..=255.0).contains(&v) {
             // We are in the good range!
+            #[allow(clippy::cast_possible_truncation)]
+            #[allow(clippy::cast_sign_loss)]
             return Ok(v as u8);
         }
     }
@@ -301,7 +298,8 @@ pub(super) fn manage_fontcolor(
     lexer: &mut Lexer,
     tokens: &[Token],
 ) -> Result<usize, Box<dyn Error + 'static>> {
-    use CurrentState::*;
+    use CurrentState::{Figure, General, Import, None, Slide, Text};
+
     match lexer.internals.state {
         Import | Slide | Figure | None => Err(
             "FontColor color does make sense only in general and slide sections."
@@ -323,7 +321,7 @@ pub(super) fn manage_fontcolor(
                         SectionMain::Text(ref mut text) => {
                             text.color = Some(c);
                         }
-                        _ => {
+                        SectionMain::Figure(_) => {
                             return Err("In a text section, but SectionMain is not a text.".into());
                         }
                     }
@@ -337,7 +335,7 @@ pub(super) fn manage_fontcolor(
     }
 }
 
-/// Color's names are taken from https://encycolorpedia.com/websafe
+/// Color's names are taken from <https://encycolorpedia.com/websafe>
 fn match_string_color(
     color_str: &str,
 ) -> Result<Color, Box<dyn Error + 'static>> {
@@ -362,9 +360,8 @@ fn match_string_color(
             let alpha = u8::from_str_radix(&color_str[6..8], 16)
                 .expect("This cannot fail");
             return Ok((red, green, blue, alpha).into());
-        } else {
-            return Err("Exa format must be 0xrrggbbaa".into());
         }
+        return Err("Exa format must be 0xrrggbbaa".into());
     }
     // Try to match the string names
     match color_str.to_lowercase().as_str() {
@@ -433,7 +430,8 @@ pub(super) fn manage_bg_color(
     lexer: &mut Lexer,
     tokens: &[Token],
 ) -> Result<usize, Box<dyn Error + 'static>> {
-    use CurrentState::*;
+    use CurrentState::{Figure, General, Import, None, Slide, Text};
+
     match lexer.internals.state {
         Import  | Text | Figure | None => Err(
             "Background color does make sense only in general and slide sections."
@@ -458,7 +456,8 @@ pub(super) fn manage_rotation(
     lexer: &mut Lexer,
     tokens: &[Token],
 ) -> Result<usize, Box<dyn Error + 'static>> {
-    use CurrentState::*;
+    use CurrentState::{Figure, General, Import, None, Slide, Text};
+
     match lexer.internals.state {
         Import | Slide | Text | General | None => {
             Err("Rotation does make sense only in a figure section.".into())

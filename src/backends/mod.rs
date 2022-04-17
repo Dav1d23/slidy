@@ -23,25 +23,26 @@ pub trait SlidyContext {
     fn render(&mut self);
 }
 
-pub enum AvailableBackends {
+pub enum Backends {
     #[cfg(feature = "sdl")]
     Sdl,
     #[cfg(feature = "cterm")]
     Crossterm,
 }
 
-fn match_try(value: &str) -> Result<AvailableBackends, String> {
+fn match_try(value: &str) -> Result<Backends, String> {
     match value.to_lowercase().as_str() {
         #[cfg(feature = "sdl")]
-        "sdl" => Ok(AvailableBackends::Sdl),
+        "sdl" => Ok(Backends::Sdl),
         #[cfg(feature = "cterm")]
-        "crossterm" => Ok(AvailableBackends::Crossterm),
+        "crossterm" => Ok(Backends::Crossterm),
         _ => Err(format!("{} backend is not supported.", value)),
     }
 }
 
-pub fn get_backend(which: AvailableBackends) -> Box<dyn SlidyBackend> {
-    use AvailableBackends::*;
+#[must_use]
+pub fn get_backend(which: &Backends) -> Box<dyn SlidyBackend> {
+    use Backends::{Crossterm, Sdl};
     match which {
         #[cfg(feature = "sdl")]
         Sdl => Box::new(sdl::Backend::new()),
@@ -50,14 +51,14 @@ pub fn get_backend(which: AvailableBackends) -> Box<dyn SlidyBackend> {
     }
 }
 
-impl TryFrom<String> for AvailableBackends {
+impl TryFrom<String> for Backends {
     type Error = String;
     fn try_from(value: String) -> Result<Self, String> {
         match_try(value.as_str())
     }
 }
 
-impl TryFrom<&str> for AvailableBackends {
+impl TryFrom<&str> for Backends {
     type Error = String;
     fn try_from(value: &str) -> Result<Self, String> {
         match_try(value)

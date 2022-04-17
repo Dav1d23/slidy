@@ -7,26 +7,27 @@ use sdl2::pixels::Color;
 use super::{utils, utils::GenericWindow};
 
 /// Define the status of the timer.
-enum TimerStatus {
+enum Status {
     /// Stopped.
     Stopped,
     /// Since when it is running.
     Running(SystemTime),
 }
 
-pub struct TimerWindow<'a> {
+pub struct Window<'a> {
     /// Contains the generic information for a window
     pub generic_win: GenericWindow,
-    timer_status: TimerStatus,
+    timer_status: Status,
     /// Total amount of elapsed seconds the timer run.
-    total_elapsed: usize,
+    total_elapsed: u64,
     /// If the window is visible
     is_visible: bool,
     /// The default font to be used.
     default_font: sdl2::ttf::Font<'a, 'a>,
 }
 
-impl<'a> TimerWindow<'a> {
+impl<'a> Window<'a> {
+    #[must_use]
     pub fn new(
         context: &sdl2::Sdl,
         font: sdl2::ttf::Font<'a, 'a>,
@@ -34,9 +35,9 @@ impl<'a> TimerWindow<'a> {
         h: u32,
         w: u32,
     ) -> Self {
-        let timer_status = TimerStatus::Stopped;
+        let timer_status = Status::Stopped;
         let total_elapsed = 0;
-        TimerWindow {
+        Window {
             generic_win: GenericWindow::new(context, resizable, h, w, "Timer"),
             timer_status,
             total_elapsed,
@@ -76,10 +77,10 @@ impl<'a> TimerWindow<'a> {
 
     /// Toggle between stop and run states.
     pub fn timer_toggle(&mut self) {
-        if let TimerStatus::Stopped = self.timer_status {
-            self.timer_start()
+        if let Status::Stopped = self.timer_status {
+            self.timer_start();
         } else {
-            self.timer_stop()
+            self.timer_stop();
         }
     }
 
@@ -91,31 +92,40 @@ impl<'a> TimerWindow<'a> {
 
     /// Start the timer.
     pub fn timer_start(&mut self) {
-        self.timer_status = TimerStatus::Running(SystemTime::now());
+        self.timer_status = Status::Running(SystemTime::now());
     }
 
     /// Stop the timer, and update the elapsed time.
     pub fn timer_stop(&mut self) {
         let elapsed = match self.timer_status {
-            TimerStatus::Running(since) => since.elapsed().unwrap().as_secs(),
-            TimerStatus::Stopped => 0,
+            Status::Running(since) => since.elapsed().unwrap().as_secs(),
+            Status::Stopped => 0,
         };
-        self.total_elapsed += elapsed as usize;
-        self.timer_status = TimerStatus::Stopped;
+        self.total_elapsed += elapsed;
+        self.timer_status = Status::Stopped;
     }
 
     /// Returns a tuple with hours/minutes/seconds elapsed
     fn get_time(&self) -> (u8, u8, u8) {
         let elapsed = match self.timer_status {
-            TimerStatus::Running(since) => since.elapsed().unwrap().as_secs(),
-            TimerStatus::Stopped => 0,
+            Status::Running(since) => since.elapsed().unwrap().as_secs(),
+            Status::Stopped => 0,
         };
 
-        let total_secs = self.total_elapsed + elapsed as usize;
+        let total_secs = self.total_elapsed + elapsed;
         let seconds = total_secs % 60;
         let minutes = ((total_secs - seconds) % (60 * 60)) / 60;
         let hours = (total_secs - (minutes * 60) - seconds) / (60 * 60);
-        (hours as u8, minutes as u8, seconds as u8)
+
+        #[allow(clippy::cast_possible_truncation)]
+        let seconds = seconds as u8; // % 60, so ok
+        #[allow(clippy::cast_possible_truncation)]
+        let minutes = minutes as u8; // % 3600 / 60 = % 60, so ok
+        #[allow(clippy::cast_possible_truncation)]
+        // This does not have to be u8, so we're just capping to 255 hours :)
+        let hours = (hours % 255) as u8;
+
+        (hours, minutes, seconds)
     }
 
     /// Main method to show a slide on the screen.

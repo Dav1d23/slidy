@@ -113,12 +113,12 @@ fn main() {
     // @TODO change this based on the feature? Add a method in backend?
     let preferred_backend = "sdl";
     // Init backend and context.
-    let backend: slidy::backends::AvailableBackends = match args.backend {
+    let backend: slidy::backends::Backends = match args.backend {
         Some(v) => v.try_into().unwrap(),
         None => preferred_backend.try_into().unwrap(),
     };
 
-    let mut backend = slidy::backends::get_backend(backend);
+    let mut backend = slidy::backends::get_backend(&backend);
     let mut context = backend.get_context();
 
     // Fix the max fps.

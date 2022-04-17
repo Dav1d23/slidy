@@ -17,13 +17,14 @@ pub struct GenericWindow {
 }
 
 impl GenericWindow {
+    #[must_use]
     pub fn new(
         context: &sdl2::Sdl,
         resizable: bool,
         height: u32,
         width: u32,
         name: &str,
-    ) -> GenericWindow {
+    ) -> Self {
         let video_subsystem = context
             .video()
             .expect("Unable to build the video subsystem?");
@@ -64,7 +65,7 @@ impl GenericWindow {
         };
 
         let id = &canvas.window().id();
-        GenericWindow {
+        Self {
             canvas,
             textures: HashMap::new(),
             id: *id,
@@ -82,16 +83,17 @@ impl GenericWindow {
         self.textures.clear();
     }
 
-    /// Add the texture that can be found at texture_path, and use that path as
-    /// a key to retrieve it.
+    /// Add the texture that can be found at `texture_path`, and use that path
+    /// as a key to retrieve it.
     pub fn add_texture<T>(&mut self, texture_path: &T)
     where
         T: AsRef<str>,
     {
+        use sdl2::image::LoadTexture;
+
         // Put the textures in the map.
         let texture_creator = self.canvas.texture_creator();
 
-        use sdl2::image::LoadTexture;
         if !self.textures.contains_key(texture_path.as_ref()) {
             let res = texture_creator.load_texture(texture_path.as_ref());
             if let Ok(texture) = res {
@@ -108,18 +110,43 @@ impl GenericWindow {
     }
 }
 
+#[must_use]
 pub fn convert_point(win: &Window, x: f32, y: f32) -> (u32, u32) {
     let (sx, sy) = win.size();
+
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_sign_loss)]
+    let f32_max = f32::MAX.ceil() as u32;
+
+    assert!(sx <= f32_max);
+    assert!(sy <= f32_max);
+
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_sign_loss)]
+    #[allow(clippy::cast_precision_loss)]
     let px = (sx as f32 * x).floor() as u32;
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_sign_loss)]
+    #[allow(clippy::cast_precision_loss)]
     let py = (sy as f32 * y).floor() as u32;
     (px, py)
 }
 
+#[must_use]
 pub fn get_scaled_rect(win: &Window, x: f32, y: f32, w: f32, h: f32) -> Rect {
     let (nx, ny) = convert_point(win, x, y);
     let (nw, nh) = convert_point(win, w, h);
     let (sx, sy) = win.size();
-    let rect = Rect::new(nx as i32, ny as i32, nw as u32, nh as u32);
+
+    assert!(nx < i32::MAX as u32);
+    assert!(ny < i32::MAX as u32);
+
+    #[allow(clippy::cast_possible_wrap)]
+    let nxx = nx as i32;
+    #[allow(clippy::cast_possible_wrap)]
+    let nyy = ny as i32;
+
+    let rect = Rect::new(nxx, nyy, nw, nh);
 
     if (nx + nw) > sx || (ny + nh) > sy {
         // Something will not fit in the image, show a log,
@@ -140,7 +167,7 @@ pub fn canvas_change_color(
 
 impl From<crate::slideshow::Color> for Color {
     fn from(c: crate::slideshow::Color) -> Self {
-        Color::from((c.r, c.g, c.b, c.a))
+        Self::from((c.r, c.g, c.b, c.a))
     }
 }
 
@@ -148,6 +175,6 @@ impl From<crate::slideshow::Color> for Color {
 impl From<Color> for crate::slideshow::Color {
     fn from(c: Color) -> Self {
         let (r, g, b, a) = c.rgba();
-        crate::slideshow::Color { r, g, b, a }
+        Self { r, g, b, a }
     }
 }

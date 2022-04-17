@@ -40,7 +40,7 @@ pub struct Color {
 
 impl From<(u8, u8, u8, u8)> for Color {
     fn from(c: (u8, u8, u8, u8)) -> Self {
-        Color {
+        Self {
             r: c.0,
             g: c.1,
             b: c.2,
@@ -61,9 +61,8 @@ pub struct SectionText {
 }
 
 impl Default for SectionText {
-    /// Get a default, new SectionText.
-    fn default() -> SectionText {
-        SectionText {
+    fn default() -> Self {
+        Self {
             text: "".to_owned(),
             color: None,
             font: None,
@@ -79,9 +78,9 @@ pub struct SectionFigure {
 }
 
 impl Default for SectionFigure {
-    /// Get a default, new SectionFigure.
-    fn default() -> SectionFigure {
-        SectionFigure {
+    #[must_use]
+    fn default() -> Self {
+        Self {
             path: "".to_owned(),
             rotation: 0.0,
         }
@@ -117,10 +116,11 @@ pub struct Slide {
 }
 
 impl Slide {
-    pub fn default() -> Slide {
+    #[must_use]
+    pub const fn default() -> Self {
         let sections = vec![];
         let bg_color = None;
-        Slide { bg_color, sections }
+        Self { bg_color, sections }
     }
 }
 

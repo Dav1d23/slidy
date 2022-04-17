@@ -9,7 +9,7 @@ use super::{utils, utils::GenericWindow};
 use crate::slideshow;
 
 /// The window holding the slideshow.
-pub struct SlideShowWindow<'a> {
+pub struct Window<'a> {
     /// Contains the generic information for a window
     pub main_win: GenericWindow,
     pub side_win: GenericWindow,
@@ -27,7 +27,8 @@ pub struct SlideShowWindow<'a> {
     default_font: sdl2::ttf::Font<'a, 'a>,
 }
 
-impl<'a> SlideShowWindow<'a> {
+impl<'a> Window<'a> {
+    #[must_use]
     pub fn new(
         context: &sdl2::Sdl,
         font: sdl2::ttf::Font<'a, 'a>,
@@ -47,7 +48,7 @@ impl<'a> SlideShowWindow<'a> {
         side_win.canvas.window_mut().hide();
 
         let slides = slideshow::Slideshow::default();
-        SlideShowWindow {
+        Window {
             main_win,
             side_win,
             idx: 0,
@@ -69,15 +70,18 @@ impl<'a> SlideShowWindow<'a> {
         self.side_win_is_visible = !self.side_win_is_visible;
     }
 
+    #[must_use]
     pub fn get_slides_counters(&self) -> (usize, usize) {
         (self.idx, self.slides.slides.len())
     }
 
     pub fn set_slide(&mut self, idx: usize) {
-        if self.idx >= self.slides.slides.len() {
-            // Panic, this idx is not correct.
-            panic!("Can't set slide {}/{}", idx, self.slides.slides.len());
-        }
+        assert!(
+            self.idx < self.slides.slides.len(),
+            "Can't set slide {}/{}",
+            idx,
+            self.slides.slides.len()
+        );
         self.idx = idx;
         self.is_changed = true;
     }
@@ -143,8 +147,8 @@ impl<'a> SlideShowWindow<'a> {
         self.main_win.remove_textures();
         self.side_win.remove_textures();
 
-        for elem in self.slides.slides.iter() {
-            for sec in elem.sections.iter() {
+        for elem in &self.slides.slides {
+            for sec in &elem.sections {
                 if let Some(slideshow::SectionMain::Figure(fig)) = &sec.sec_main
                 {
                     self.main_win.add_texture(&fig.path);
@@ -158,7 +162,7 @@ impl<'a> SlideShowWindow<'a> {
     pub fn present_slide(&mut self) {
         if self.slides.slides.is_empty() {
             // Nothing is given, get some "default" slide to show.
-            self.slides.slides.push(slideshow::Slide::default())
+            self.slides.slides.push(slideshow::Slide::default());
         }
         self.set_first_good_slide();
         // prepare the rects where to write the text
@@ -177,8 +181,7 @@ impl<'a> SlideShowWindow<'a> {
             .slides
             .font_size
             .as_ref()
-            .map(|r| (r.w, r.h))
-            .unwrap_or((0.018, 0.08));
+            .map_or((0.018, 0.08), |r| (r.w, r.h));
 
         // First slide window.
         draw_sections(
@@ -226,37 +229,40 @@ fn draw_single_section<'a>(
             slideshow::SectionMain::Figure(fig) => {
                 {
                     let res = textures.get(&fig.path);
-                    if let Some(texture) = res {
-                        // if we have a path, the section cannot contain anything else
-                        let (x_start, y_start) = match &elem.position {
-                            Some(p) => (p.x, p.y),
-                            None => (0.01, 0.01),
-                        };
-                        let (x_size, y_size) = match &elem.size {
-                            Some(p) => (p.w, p.h),
-                            None => (0.1, 0.1),
-                        };
-                        let rect = utils::get_scaled_rect(
-                            canvas.window(),
-                            x_start,
-                            y_start,
-                            x_size,
-                            y_size,
-                        );
-                        canvas
-                            .copy_ex(
-                                texture,
-                                None,
-                                rect,
-                                fig.rotation.into(),
-                                None,
-                                false,
-                                false,
-                            )
-                            .unwrap();
-                    } else {
-                        error!("Texture at {} was not ready", fig.path);
-                    }
+                    res.map_or_else(
+                        || {
+                            error!("Texture at {} was not ready", fig.path);
+                        },
+                        |texture| {
+                            // if we have a path, the section cannot contain anything else
+                            let (x_start, y_start) = match &elem.position {
+                                Some(p) => (p.x, p.y),
+                                None => (0.01, 0.01),
+                            };
+                            let (x_size, y_size) = match &elem.size {
+                                Some(p) => (p.w, p.h),
+                                None => (0.1, 0.1),
+                            };
+                            let rect = utils::get_scaled_rect(
+                                canvas.window(),
+                                x_start,
+                                y_start,
+                                x_size,
+                                y_size,
+                            );
+                            canvas
+                                .copy_ex(
+                                    texture,
+                                    None,
+                                    rect,
+                                    fig.rotation.into(),
+                                    None,
+                                    false,
+                                    false,
+                                )
+                                .unwrap();
+                        },
+                    );
                 }
             }
             // Manage text
@@ -267,9 +273,22 @@ fn draw_single_section<'a>(
             }) => {
                 let text_slice = text.as_str();
                 for (idx, chunk) in text_slice.split('\n').enumerate() {
+                    #[allow(clippy::cast_possible_truncation)]
+                    #[allow(clippy::cast_sign_loss)]
+                    let f32_max_usize = f32::MAX.ceil() as usize;
+                    assert!(idx <= f32_max_usize);
+                    #[allow(clippy::cast_precision_loss)]
+                    let idx_f32 = idx as f32;
+
                     if chunk.is_empty() {
                         continue;
                     }
+
+                    assert!(chunk.len() <= f32_max_usize);
+                    #[allow(clippy::cast_sign_loss)]
+                    #[allow(clippy::cast_precision_loss)]
+                    let chunk_len = chunk.len() as f32;
+
                     // Get the default size for each letter.
                     let (x_size, y_size) = match &elem.size {
                         Some(p) => (p.w, p.h),
@@ -277,7 +296,8 @@ fn draw_single_section<'a>(
                     };
                     let (x_start, y_start) = match &elem.position {
                         // Each line starts 0.1 lower than the size
-                        Some(p) => (p.x, p.y + y_size * idx as f32),
+                        Some(p) => (p.x, y_size.mul_add(idx_f32, p.y)),
+
                         // If we don't have any default, starts from base_height
                         // and 0.01
                         None => (0.01, *base_height),
@@ -287,7 +307,7 @@ fn draw_single_section<'a>(
                     *base_height += y_size;
                     // The chunk size is the whole line.
                     // We build a single rect that contains the whole line.
-                    let chunk_size: f32 = chunk.len() as f32 * x_size;
+                    let chunk_size: f32 = chunk_len * x_size;
                     let rect = utils::get_scaled_rect(
                         canvas.window(),
                         x_start,
@@ -320,7 +340,7 @@ fn draw_single_section<'a>(
 
 fn draw_sections(
     idx: usize,
-    slides: &mut Vec<slideshow::Slide>,
+    slides: &mut [slideshow::Slide],
     bg_col: slideshow::Color,
     window: &mut GenericWindow,
     font_size: (f32, f32),
@@ -332,7 +352,7 @@ fn draw_sections(
     {
         utils::canvas_change_color(&mut window.canvas, col);
 
-        for section in slides[idx].sections.iter() {
+        for section in &slides[idx].sections {
             draw_single_section(
                 window,
                 section,
