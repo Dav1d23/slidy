@@ -6,7 +6,7 @@ use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 
-use notify::{raw_watcher, RecursiveMode, Watcher};
+use notify::{RecursiveMode, Watcher};
 use structopt::StructOpt;
 use tracing::{error, info, level_filters, warn};
 
@@ -51,8 +51,8 @@ fn main() {
     let (request_update_tx, request_update_rx) = channel();
     // 3. Notify a change in the input file.
     let (watcher_tx, watcher_rx) = channel();
-    let mut watcher =
-        raw_watcher(watcher_tx).expect("Unable to create the raw watcher");
+    let mut watcher = notify::recommended_watcher(watcher_tx)
+        .expect("Unable to create the watcher");
     watcher
         .watch(&path, RecursiveMode::NonRecursive)
         .unwrap_or_else(|e| panic!("Unable to watch {:?}: {}", &path, e));
