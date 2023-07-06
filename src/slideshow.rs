@@ -31,7 +31,7 @@ pub struct Size {
 }
 
 #[derive(
-    serde::Serialize, serde::Deserialize, Debug, Copy, Clone, PartialEq,
+    serde::Serialize, serde::Deserialize, Debug, Copy, Clone, PartialEq, Eq,
 )]
 /// A color, represented as rgb + alpha.
 pub struct Color {
@@ -56,8 +56,9 @@ impl From<(u8, u8, u8, u8)> for Color {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Eq)]
 /// Define a section that contains a text.
+#[derive(Default)]
 pub struct SectionText {
     /// The text that should be rendered
     pub text: String,
@@ -66,16 +67,6 @@ pub struct SectionText {
     // The font name, must be aligned with the global one in the Slide struct
     /// Unused at the moment
     pub font: Option<String>,
-}
-
-impl Default for SectionText {
-    fn default() -> Self {
-        Self {
-            text: "".to_owned(),
-            color: None,
-            font: None,
-        }
-    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
@@ -91,7 +82,7 @@ impl Default for SectionFigure {
     #[must_use]
     fn default() -> Self {
         Self {
-            path: "".to_owned(),
+            path: String::new(),
             rotation: 0.0,
         }
     }

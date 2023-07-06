@@ -75,7 +75,7 @@ mod test {
         let d = load_exists!("resources/simple_slide.txt");
 
         let slideshow = parse_file(&d)
-            .map_err(|e| panic!("Unable to read the slides: {}", e))
+            .map_err(|e| panic!("Unable to read the slides: {e}"))
             .unwrap();
 
         assert_eq!(slideshow.slides.len(), 3);
@@ -97,7 +97,7 @@ mod test {
             .unwrap_or_else(|_| panic!("File {:?} not found.", &d));
         let reader = BufReader::new(f);
         let slideshow: Slideshow = serde_json::from_reader(reader)
-            .map_err(|e| panic!("Unable to read the slides: {}", e))
+            .map_err(|e| panic!("Unable to read the slides: {e}"))
             .unwrap();
 
         assert_eq!(slideshow.slides.len(), 1);

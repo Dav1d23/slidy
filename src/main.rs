@@ -6,27 +6,27 @@ use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 
+use clap::Parser;
 use notify::{RecursiveMode, Watcher};
-use structopt::StructOpt;
 use tracing::{error, info, level_filters, warn};
 
-#[derive(Debug, structopt::StructOpt)]
+#[derive(Debug, Parser)]
 /// My Amazing Personal Slideshow command line options.
 struct Args {
-    #[structopt(required = true)]
+    #[arg(required = true)]
     /// The path to the slides to be shown.
     slide_path: String,
-    #[structopt(short = "l", long = "log-level", default_value = "INFO")]
+    #[arg(short = 'l', long = "log-level", default_value = "INFO")]
     /// The log level to be used.
     log_level: String,
-    #[structopt(short = "b", long = "backend")]
+    #[arg(short = 'b', long = "backend")]
     /// The log level to be used.
     backend: Option<String>,
 }
 
 #[doc(hidden)]
 fn main() {
-    let args = Args::from_args();
+    let args = Args::parse();
 
     let filter = level_filters::LevelFilter::from_str(&args.log_level)
         .expect("Please provide a valid log level.");
