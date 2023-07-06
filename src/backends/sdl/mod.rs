@@ -34,9 +34,9 @@ mod utils;
 /// Get the default, included font. It is the `FreeMono` one, and it is
 /// included in the binary, so no need to provide any other file.
 #[must_use]
-fn get_default_font<'ttf>(
-    context: &'ttf sdl2::ttf::Sdl2TtfContext,
-) -> sdl2::ttf::Font<'ttf, '_> {
+fn get_default_font(
+    context: &sdl2::ttf::Sdl2TtfContext,
+) -> sdl2::ttf::Font<'_, '_> {
     // TODO The font should be read from the slide directly
     //      and _then_ if nothing is provided use the default one.
     let fontbytes = include_bytes!("../../../assets/FreeMono.ttf");

@@ -84,7 +84,7 @@ impl<'b> super::SlidyContext for Context<'b> {
 
     /// Manage the incoming events.
     fn manage_inputs(&mut self) -> super::ShouldQuit {
-        while let Ok(true) = poll(Duration::ZERO) {
+        while matches!(poll(Duration::ZERO), Ok(true)) {
             let evt = read().expect("Poll told us this should work.");
             trace!("{:#?}", evt);
             match evt {

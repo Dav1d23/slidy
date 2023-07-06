@@ -77,10 +77,7 @@ impl<'a> Lexer<'a> {
         &mut self,
         tokens: &[Token],
     ) -> Result<(), Box<dyn Error + 'static>> {
-        let base_folder = match self.base_folder {
-            Some(b) => b,
-            None => todo!("base_folder must be set for now."),
-        };
+        let Some(base_folder) = self.base_folder else {todo!("base_folder must be set for now.")};
         let mut tokens = tokens;
         while let Some((t, rem)) = tokens.split_first() {
             // t is the token we are checking, rem is the remaining tokens.

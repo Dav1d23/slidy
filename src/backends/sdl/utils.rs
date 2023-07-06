@@ -39,13 +39,11 @@ impl GenericWindow {
         }
         let window = windowbuilder.build().expect("Unable to build the window");
 
-        let canvas = match window
+        let canvas = window
             .into_canvas()
             .target_texture()
             .accelerated()
-            .build()
-        {
-            Err(_) => {
+            .build().map_or({
                 warn!(
                     "Unable to build an accelerated context, trying the plain one."
                 );
@@ -60,9 +58,8 @@ impl GenericWindow {
                 window.into_canvas().target_texture().build().expect(
                     "Unable to build even the non-accelerated window...",
                 )
-            }
-            Ok(c) => c,
-        };
+            }, |c| c)
+        ;
 
         let id = &canvas.window().id();
         Self {

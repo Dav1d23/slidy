@@ -79,7 +79,7 @@ impl<'a> Window<'a> {
 
     /// Toggle between stop and run states.
     pub fn timer_toggle(&mut self) {
-        if let Status::Stopped = self.timer_status {
+        if matches!(self.timer_status, Status::Stopped) {
             self.timer_start();
         } else {
             self.timer_stop();
@@ -138,7 +138,7 @@ impl<'a> Window<'a> {
         // Draw the timer
         let surface_text = self
             .default_font
-            .render(format!("{:02}:{:02}:{:02}", h, m, s).as_str())
+            .render(format!("{h:02}:{m:02}:{s:02}").as_str())
             .solid(Color::RED)
             .unwrap();
         let texture_creator = c.texture_creator();
@@ -153,7 +153,7 @@ impl<'a> Window<'a> {
         // Draw the slide counter
         let surface_text = self
             .default_font
-            .render(format!("{}/{}", slides_idx, slides_tot).as_str())
+            .render(format!("{slides_idx}/{slides_tot}").as_str())
             .solid(Color::BLACK)
             .unwrap();
         let texture_creator = c.texture_creator();

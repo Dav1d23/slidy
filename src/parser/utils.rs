@@ -13,15 +13,14 @@ use crate::slideshow::{
 
 fn apply_slide<T, U>(
     slide: &mut Option<Slide>,
-    mut f: T,
+    f: T,
 ) -> Result<U, Box<dyn Error + 'static>>
 where
     T: FnMut(&mut Slide) -> Result<U, Box<dyn Error + 'static>>,
 {
-    match slide {
-        Some(slide) => f(slide),
-        None => Err("Please create a slide first.".into()),
-    }
+    slide
+        .as_mut()
+        .map_or_else(|| Err("Please create a slide first.".into()), f)
 }
 
 pub(super) fn manage_import(
@@ -31,12 +30,10 @@ pub(super) fn manage_import(
 ) -> Result<usize, Box<dyn Error + 'static>> {
     lexer.internals.state = CurrentState::Import;
     // For the import to work, the next token must be a string.
-    let el = if let Some(el) = tokens.get(0).and_then(|t| match t.symbol {
+    let Some(el) = tokens.get(0).and_then(|t| match t.symbol {
         Structure::String(el) => Some(el),
         _ => None,
-    }) {
-        el
-    } else {
+    }) else {
         return Err("In an import, we must have a path.".into());
     };
     // If we have a slide to import, we need to import it
@@ -125,12 +122,10 @@ pub(super) fn manage_figure(
 ) -> Result<usize, Box<dyn Error + 'static>> {
     lexer.internals.state = CurrentState::Figure;
 
-    let el = if let Some(el) = tokens.get(0).and_then(|t| match t.symbol {
+    let Some(el) = tokens.get(0).and_then(|t| match t.symbol {
         Structure::String(el) => Some(el),
         _ => None,
-    }) {
-        el
-    } else {
+    }) else {
         return Err("In an figure, we must have a path.".into());
     };
 
@@ -172,25 +167,17 @@ pub(super) fn manage_position(
             apply_slide(&mut lexer.internals.slide, |slide| {
                 // Get 2 numbers
                 let v = if let Some([t1, t2]) = tokens.get(0..2) {
-                    let v1 = match t1.symbol {
-                        Structure::Number(v) => v,
-                        _ => {
+                    let Structure::Number(v1) = t1.symbol else {
                             return Err(format!(
-                                "Expect a float, found {:?}",
-                                t1
+                                "Expect a float, found {t1:?}"
                             )
                             .into())
-                        }
                     };
-                    let v2 = match t2.symbol {
-                        Structure::Number(v) => v,
-                        _ => {
+                    let Structure::Number(v2) = t2.symbol else {
                             return Err(format!(
-                                "Expect a float, found {:?}",
-                                t2
+                                "Expect a float, found {t2:?}"
                             )
                             .into())
-                        }
                     };
                     Position { x: v1, y: v2 }
                 } else {
@@ -214,10 +201,7 @@ fn get_size(
 ) -> Result<(Size, usize), Box<dyn Error + 'static>> {
     if let Some([t1, t2]) = tokens.get(0..2) {
         let skip;
-        let mut v1 = match t1.symbol {
-            Structure::Number(v) => v,
-            _ => return Err(format!("Expect a float, found {:?}", t1).into()),
-        };
+        let Structure::Number(mut v1) = t1.symbol else { return Err(format!("Expect a float, found {t1:?}").into()) };
         let v2 = if let Structure::Number(v) = t2.symbol {
             // We have a second number, so we take that for the size
             skip = 2;
@@ -235,7 +219,7 @@ fn get_size(
         let (v1, v2) = if let Structure::Number(v) = t.symbol {
             (v / 10.0 * 0.012, v / 10.0 * 0.06)
         } else {
-            return Err(format!("Expect a float, found {:?}", t).into());
+            return Err(format!("Expect a float, found {t:?}").into());
         };
         Ok((Size { w: v1, h: v2 }, 1))
     } else {
@@ -272,10 +256,7 @@ pub(super) fn manage_size(
 }
 
 fn extract_f32(t: &Token) -> Result<f32, Box<dyn Error + 'static>> {
-    let v = match t.symbol {
-        Structure::Number(v) => v,
-        _ => return Err(format!("Expect a float, found {:?}", t).into()),
-    };
+    let Structure::Number(v) = t.symbol else { return Err(format!("Expect a float, found {t:?}").into()) };
     Ok(v)
 }
 
@@ -291,7 +272,7 @@ fn extract_u8(t: &Token) -> Result<u8, Box<dyn Error + 'static>> {
             return Ok(v as u8);
         }
     }
-    Err(format!("Expect a float, found {:?}", t).into())
+    Err(format!("Expect a integer value, found {t:?}").into())
 }
 
 pub(super) fn manage_fontcolor(
@@ -343,7 +324,7 @@ fn match_string_color(
     if let Some(color_str) = color_str.strip_prefix('#') {
         // Hex mode
         for c in color_str.chars() {
-            if !(('0'..='9').contains(&c)
+            if !(c.is_ascii_digit()
                 || ('a'..='f').contains(&c)
                 || ('A'..='F').contains(&c))
             {
@@ -383,7 +364,7 @@ fn match_string_color(
         "yellow" => return Ok((0xff, 0xff, 0x00, 0xff).into()),
         _ => {}
     }
-    Err(format!("Unable to parse {} into a known color.", color_str).into())
+    Err(format!("Unable to parse {color_str} into a known color.").into())
 }
 
 fn get_color(
@@ -401,7 +382,7 @@ fn get_color(
         if let (Ok(v1), Ok(v2), Ok(v3), Ok(v4)) = (v1, v2, v3, v4) {
             res = Some((v1, v2, v3, v4));
         } else {
-            err_msg.push_str(&format!("found 4 invalid tokens, but some are invalid: {:?} {:?} {:?} {:?}", t1, t2, t3, t4));
+            err_msg.push_str(&format!("found 4 invalid tokens, but some are invalid: {t1:?} {t2:?} {t3:?} {t4:?}"));
         }
     }
     if let Some(res) = res {
@@ -414,8 +395,7 @@ fn get_color(
             match match_string_color(el) {
                 Ok(c) => return Ok((c, 1)),
                 Err(e) => err_msg.push_str(&format!(
-                    "unable to get the color out of a string: {}",
-                    e
+                    "unable to get the color out of a string: {e}"
                 )),
             }
         }
@@ -468,11 +448,9 @@ pub(super) fn manage_rotation(
                     match t.symbol {
                         Structure::Number(v) => v,
                         _ => {
-                            return Err(format!(
-                                "Expect a float, found {:?}",
-                                t
+                            return Err(
+                                format!("Expect a float, found {t:?}").into()
                             )
-                            .into())
                         }
                     }
                 } else {
@@ -503,55 +481,55 @@ mod test {
     fn get_color_ok() {
         let tokens = tokenizer(":cl 0 23 2 42");
         let c = get_color(&tokens[1..]);
-        assert!(c.is_ok(), "{:#?}", c);
+        assert!(c.is_ok(), "{c:#?}");
         let c = c.unwrap().0;
-        assert_eq!(c.r, 0, "{:?}", c);
-        assert_eq!(c.g, 23, "{:?}", c);
-        assert_eq!(c.b, 2, "{:?}", c);
-        assert_eq!(c.a, 42, "{:?}", c);
+        assert_eq!(c.r, 0, "{c:?}");
+        assert_eq!(c.g, 23, "{c:?}");
+        assert_eq!(c.b, 2, "{c:?}");
+        assert_eq!(c.a, 42, "{c:?}");
     }
 
     #[test]
     fn get_color_ok_2() {
         let tokens = tokenizer(":cl #0305a0c1");
         let c = get_color(&tokens[1..]);
-        assert!(c.is_ok(), "{:?}", c);
+        assert!(c.is_ok(), "{c:?}");
         let c = c.unwrap().0;
-        assert_eq!(c.r, 3, "{:?}", c);
-        assert_eq!(c.g, 5, "{:?}", c);
-        assert_eq!(c.b, 160, "{:?}", c);
-        assert_eq!(c.a, 193, "{:?}", c);
+        assert_eq!(c.r, 3, "{c:?}");
+        assert_eq!(c.g, 5, "{c:?}");
+        assert_eq!(c.b, 160, "{c:?}");
+        assert_eq!(c.a, 193, "{c:?}");
     }
 
     #[test]
     fn get_color_ok_3() {
         let tokens = tokenizer(":cl silver");
         let c = get_color(&tokens[1..]);
-        assert!(c.is_ok(), "{:?}", c);
+        assert!(c.is_ok(), "{c:?}");
         let c = c.unwrap().0;
-        assert_eq!(c.r, 192, "{:?}", c);
-        assert_eq!(c.g, 192, "{:?}", c);
-        assert_eq!(c.b, 192, "{:?}", c);
-        assert_eq!(c.a, 255, "{:?}", c);
+        assert_eq!(c.r, 192, "{c:?}");
+        assert_eq!(c.g, 192, "{c:?}");
+        assert_eq!(c.b, 192, "{c:?}");
+        assert_eq!(c.a, 255, "{c:?}");
     }
 
     #[test]
     fn get_color_ko() {
         let tokens = tokenizer(":cl pinka");
         let c = get_color(&tokens[1..]);
-        assert!(c.is_err(), "{:?}", c);
+        assert!(c.is_err(), "{c:?}");
     }
 
     #[test]
     fn get_color_ko2() {
         let tokens = tokenizer(":cl 300 200 100 100");
         let c = get_color(&tokens[1..]);
-        assert!(c.is_err(), "{:?}", c);
+        assert!(c.is_err(), "{c:?}");
     }
     #[test]
     fn get_color_ko3() {
         let tokens = tokenizer(":cl #q2222222");
         let c = get_color(&tokens[1..]);
-        assert!(c.is_err(), "{:?}", c);
+        assert!(c.is_err(), "{c:?}");
     }
 }

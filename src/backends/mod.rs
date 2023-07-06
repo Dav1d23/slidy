@@ -66,7 +66,7 @@ fn match_try(value: &str) -> Result<Backends, String> {
         "sdl" => Ok(Backends::Sdl),
         #[cfg(feature = "cterm")]
         "crossterm" => Ok(Backends::Crossterm),
-        _ => Err(format!("{} backend is not supported.", value)),
+        _ => Err(format!("{value} backend is not supported.")),
     }
 }
 

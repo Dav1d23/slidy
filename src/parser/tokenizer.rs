@@ -81,13 +81,7 @@ fn build_token(val: &str, linenum: usize, beg: usize, end: usize) -> Token {
         ":fg" => Figure,
         ":rt" => Rotation,
         ":im" => Import,
-        _ => {
-            if let Ok(num) = val.parse::<f32>() {
-                Number(num)
-            } else {
-                String(val)
-            }
-        }
+        _ => val.parse::<f32>().map_or(String(val), Number),
     };
 
     Token {
@@ -233,7 +227,7 @@ mod test {
             },
         }];
         for (e1, e2) in tokens.iter().zip(res.iter()) {
-            assert_eq!(e1, e2, "{:?} vs {:?}", tokens, res);
+            assert_eq!(e1, e2, "{tokens:?} vs {res:?}");
         }
     }
 
@@ -315,9 +309,9 @@ mod test {
                 },
             },
         ];
-        assert_eq!(tokens.len(), res.len(), "{:?} vs {:?}", tokens, res);
+        assert_eq!(tokens.len(), res.len(), "{tokens:?} vs {res:?}");
         for (e1, e2) in tokens.iter().zip(res.iter()) {
-            assert_eq!(e1, e2, "{:?} vs {:?}", tokens, res);
+            assert_eq!(e1, e2, "{tokens:?} vs {res:?}");
         }
     }
 
@@ -361,7 +355,7 @@ mod test {
             },
         ];
         for (e1, e2) in tokens.iter().zip(res.iter()) {
-            assert_eq!(e1, e2, "{:?} vs {:?}", tokens, res);
+            assert_eq!(e1, e2, "{tokens:?} vs {res:?}");
         }
     }
 
@@ -475,7 +469,7 @@ mod test {
             },
         ];
         for (e1, e2) in tokens.iter().zip(res.iter()) {
-            assert_eq!(e1, e2, "{:?} vs {:?}", tokens, res);
+            assert_eq!(e1, e2, "{tokens:?} vs {res:?}");
         }
     }
 }

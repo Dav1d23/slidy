@@ -223,21 +223,20 @@ fn draw_single_section<'a>(
             // Manage pictures
             slideshow::SectionMain::Figure(fig) => {
                 {
-                    let res = textures.get(&fig.path);
-                    res.map_or_else(
+                    textures.get(&fig.path).map_or_else(
                         || {
                             error!("Texture at {} was not ready", fig.path);
                         },
                         |texture| {
                             // if we have a path, the section cannot contain anything else
-                            let (x_start, y_start) = match &elem.position {
-                                Some(p) => (p.x, p.y),
-                                None => (0.01, 0.01),
-                            };
-                            let (x_size, y_size) = match &elem.size {
-                                Some(p) => (p.w, p.h),
-                                None => (0.1, 0.1),
-                            };
+                            let (x_start, y_start) = elem
+                                .position
+                                .as_ref()
+                                .map_or((0.01, 0.01), |p| (p.x, p.y));
+                            let (x_size, y_size) = elem
+                                .size
+                                .as_ref()
+                                .map_or((0.1, 0.1), |p| (p.w, p.h));
                             let rect = utils::get_scaled_rect(
                                 canvas.window(),
                                 x_start,
@@ -285,18 +284,15 @@ fn draw_single_section<'a>(
                     let chunk_len = chunk.len() as f32;
 
                     // Get the default size for each letter.
-                    let (x_size, y_size) = match &elem.size {
-                        Some(p) => (p.w, p.h),
-                        None => font_size,
-                    };
-                    let (x_start, y_start) = match &elem.position {
-                        // Each line starts 0.1 lower than the size
-                        Some(p) => (p.x, y_size.mul_add(idx_f32, p.y)),
-
+                    let (x_size, y_size) =
+                        elem.size.as_ref().map_or(font_size, |p| (p.w, p.h));
+                    let (x_start, y_start) = elem.position.as_ref().map_or(
                         // If we don't have any default, starts from base_height
                         // and 0.01
-                        None => (0.01, *base_height),
-                    };
+                        (0.01, *base_height),
+                        // Each line starts 0.1 lower than the size
+                        |p| (p.x, y_size.mul_add(idx_f32, p.y)),
+                    );
                     // Update base_height so what next run we already are
                     // down this much and we won't overwrite new text.
                     *base_height += y_size;
@@ -313,10 +309,7 @@ fn draw_single_section<'a>(
                     //let rect = Rect::new(x_start, y_start, chunk_size, 0.01);
                     let surface_text = default_font
                         .render(chunk)
-                        .solid(match color {
-                            Some(c) => *c,
-                            None => font_col,
-                        })
+                        .solid(color.map_or(font_col, |c| c))
                         .unwrap();
                     let texture_creator = canvas.texture_creator();
                     let texture =
