@@ -53,7 +53,7 @@ impl Backend {
 impl Drop for Backend {
     fn drop(&mut self) {
         match terminal::disable_raw_mode() {
-            Ok(_) => debug!("Raw-mode disabled."),
+            Ok(()) => debug!("Raw-mode disabled."),
             Err(e) => error!("Unable to switch to raw-mode: {:?}", e),
         }
     }

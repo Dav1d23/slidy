@@ -181,7 +181,7 @@ impl<'a> Window<'a> {
         // First slide window.
         draw_sections(
             self.idx,
-            &mut self.slides.slides,
+            &self.slides.slides,
             bg_col,
             &mut self.main_win,
             font_size,
@@ -197,7 +197,7 @@ impl<'a> Window<'a> {
         };
         draw_sections(
             next_idx,
-            &mut self.slides.slides,
+            &self.slides.slides,
             bg_col,
             &mut self.side_win,
             font_size,
@@ -328,7 +328,7 @@ fn draw_single_section<'a>(
 
 fn draw_sections(
     idx: usize,
-    slides: &mut [slideshow::Slide],
+    slides: &[slideshow::Slide],
     bg_col: slideshow::Color,
     window: &mut GenericWindow,
     font_size: (f32, f32),

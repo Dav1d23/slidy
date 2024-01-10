@@ -30,7 +30,7 @@ pub(super) fn manage_import(
 ) -> Result<usize, Box<dyn Error + 'static>> {
     lexer.internals.state = CurrentState::Import;
     // For the import to work, the next token must be a string.
-    let Some(el) = tokens.get(0).and_then(|t| match t.symbol {
+    let Some(el) = tokens.first().and_then(|t| match t.symbol {
         Structure::String(el) => Some(el),
         _ => None,
     }) else {
@@ -122,7 +122,7 @@ pub(super) fn manage_figure(
 ) -> Result<usize, Box<dyn Error + 'static>> {
     lexer.internals.state = CurrentState::Figure;
 
-    let Some(el) = tokens.get(0).and_then(|t| match t.symbol {
+    let Some(el) = tokens.first().and_then(|t| match t.symbol {
         Structure::String(el) => Some(el),
         _ => None,
     }) else {
@@ -214,7 +214,7 @@ fn get_size(
             v2
         };
         Ok((Size { w: v1, h: v2 }, skip))
-    } else if let Some(t) = tokens.get(0) {
+    } else if let Some(t) = tokens.first() {
         // Single value
         let (v1, v2) = if let Structure::Number(v) = t.symbol {
             (v / 10.0 * 0.012, v / 10.0 * 0.06)
@@ -390,7 +390,7 @@ fn get_color(
     }
     trace!("get_color: check if a single token works.");
     // Res was not ok, try to take a single string.
-    if let Some(t) = tokens.get(0) {
+    if let Some(t) = tokens.first() {
         if let Structure::String(el) = t.symbol {
             match match_string_color(el) {
                 Ok(c) => return Ok((c, 1)),
@@ -444,7 +444,7 @@ pub(super) fn manage_rotation(
         }
         Figure => {
             apply_slide(&mut lexer.internals.slide, |slide| {
-                let v = if let Some(t) = tokens.get(0) {
+                let v = if let Some(t) = tokens.first() {
                     match t.symbol {
                         Structure::Number(v) => v,
                         _ => {
